@@ -12,7 +12,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(),
-              logging.FileHandler('../block-insights/requests.log')])
+              logging.FileHandler('requests.log')])
 
 
 class API:
