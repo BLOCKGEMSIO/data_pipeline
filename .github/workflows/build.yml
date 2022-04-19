@@ -12,10 +12,6 @@ jobs:
           python-version: '3.7'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - name: Download artifact
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: build.yml
       - run: python main.py
       - run: mkdir uploads
       - run: mv total.csv uploads
