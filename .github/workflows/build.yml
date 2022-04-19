@@ -1,8 +1,6 @@
 name: Python package
 
 on: [push]
-  schedule:
-    - cron: "*/5 * * * *"
 
 jobs:
   build:
@@ -15,12 +13,3 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt
       - run: python main.py
-      - run: mkdir uploads
-      - run: mv total.csv uploads
-      - run: mv slushpool.json uploads
-      - run: mv antpool.csv uploads
-      - run: mv luxor.csv uploads
-      - uses: actions/upload-artifact@v3
-        with:
-          name: downloads
-          path: uploads
