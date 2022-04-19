@@ -1,8 +1,7 @@
 name: Crone Job
 
-on:
-  schedule:
-    - cron: "27 * * * *"
+on: [push]
+
 
 jobs:
   build:
