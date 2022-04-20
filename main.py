@@ -14,7 +14,25 @@ sign_key = '12eecb4cf25e4fa684c906fa98a803a7'  # 密钥
 sign_SECRET = '73939395118c445a8608c3c6e88a9527'  # 密码
 html_payment = 'https://antpool.com/api/paymentHistoryV2.htm'
 
+class Data:
+    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward):
+        self.total_btc = total_btc
+        self.total_btc_dollar = total_btc_dollar
+        self.total_btc_eur = total_btc_eur
+        self.btc_in_pools = btc_in_pools
+        self.btc_in_pools_eur = btc_in_pools_eur
+        self.btc_on_exchange = btc_on_exchange
+        self.btc_on_exchange_eur = btc_on_exchange_eur
+        self.earnings = earnings
+        self.yesterdays_reward = yesterdays_reward
 
+class Result:
+  def results(self):
+      usd_price = get_current_data_USD()['USD']
+      eur_price = get_current_data_EUR()['EUR']
+      earnings = get_total_earnings(usd_price, eur_price)
+      data = results(earnings,usd_price,eur_price)
+      return data
 
 def get_signature():  # 签名操作
     nonce = int(time.time() * 1000)  # 毫秒时间戳
@@ -331,6 +349,19 @@ def print_results(earnings,usd_price, eur_price):
     print(earnings.loc[:, 'daily_reward'].sum() * eur_price)
     print('')
 
+def results(earnings,usd_price, eur_price):
+    btc_on_exchange = get_btc_wallet_transactions()
+    btc_on_exchange_eur = btc_on_exchange * eur_price
+    btc_in_pools = earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
+    btc_in_pools_eur = btc_in_pools * eur_price
+    total_btc = earnings.loc[:, 'daily_reward'].sum()
+    total_btc_dollar = total_btc * usd_price
+    total_btc_eur = total_btc * eur_price
+    yesterdays_reward = earnings['daily_reward'].iloc[-2]
+    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward)
+
+    return data
+
 def plot_results(earnings):
     earnings.drop(earnings.tail(1).index, inplace=True)
     earnings.drop(earnings.head(10).index, inplace=True)
@@ -349,11 +380,12 @@ def plot_results(earnings):
     plt.show()
 
 def main():
-    usd_price = get_current_data_USD()['USD']
-    eur_price = get_current_data_EUR()['EUR']
-    earnings = get_total_earnings(usd_price, eur_price)
-    print_results(earnings, usd_price, eur_price)
-    #plot_results(earnings)
+    result = Result().results()
+    # usd_price = get_current_data_USD()['USD']
+    # eur_price = get_current_data_EUR()['EUR']
+    # earnings = get_total_earnings(usd_price, eur_price)
+    # print_results(earnings, usd_price, eur_price)
+    # plot_results(earnings)
 
 
 main()
