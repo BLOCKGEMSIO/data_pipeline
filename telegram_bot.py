@@ -48,6 +48,13 @@ def status(update: Update, context: CallbackContext) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
+def hashrate(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+
+    update.message.reply_markdown_v2(
+        fr'Under Construction ' + u'🚨',
+        reply_markup=ForceReply(selective=True),
+    )
 
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
@@ -78,6 +85,7 @@ def main() -> None:
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("status", status))
+    dispatcher.add_handler(CommandHandler("hashrate", hashrate))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     # on non command i.e message - echo the message on Telegram
