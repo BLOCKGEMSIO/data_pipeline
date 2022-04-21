@@ -15,7 +15,7 @@ sign_SECRET = '73939395118c445a8608c3c6e88a9527'  # 密码
 html_payment = 'https://antpool.com/api/paymentHistoryV2.htm'
 
 class Data:
-    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward):
+    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price):
         self.total_btc = total_btc
         self.total_btc_dollar = total_btc_dollar
         self.total_btc_eur = total_btc_eur
@@ -25,14 +25,12 @@ class Data:
         self.btc_on_exchange_eur = btc_on_exchange_eur
         self.earnings = earnings
         self.yesterdays_reward = yesterdays_reward
+        self.us_btc_price = us_btc_price
+        self.eur_btc_price = eur_btc_price
 
 class Result:
   def results(self):
-      usd_price = get_current_data_USD()['USD']
-      eur_price = get_current_data_EUR()['EUR']
-      earnings = get_total_earnings(usd_price, eur_price)
-      data = results(earnings,usd_price,eur_price)
-      return data
+      return load()
 
 def get_signature():  # 签名操作
     nonce = int(time.time() * 1000)  # 毫秒时间戳
@@ -321,16 +319,18 @@ def upload_file_to_azure(s):
     with open(s, "rb") as data:
         blob_client_instance.upload_blob(data, blob_type="BlockBlob",overwrite=True)
 
-def print_results(earnings,usd_price, eur_price):
+def print_results(results):
+    usd_price = results.us_btc_price
+    eur_price = results.eur_btc_price
     btc_on_exchange = get_btc_wallet_transactions()
     btc_on_exchange_eur = btc_on_exchange * eur_price
-    btc_in_pools = earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
+    btc_in_pools = results.earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
     btc_in_pools_eur = btc_in_pools * eur_price
 
-    print(earnings)
+    print(results.earnings)
     print('')
     print('TOTAL BTC MINED: ')
-    print(earnings.loc[:, 'daily_reward'].sum())
+    print(results.earnings.loc[:, 'daily_reward'].sum())
 
     print('')
     print('BTC PENDING IN POOLS: ')
@@ -343,10 +343,10 @@ def print_results(earnings,usd_price, eur_price):
 
     print('')
     print('TOTAL WORTH in $: ')
-    print(earnings.loc[:, 'daily_reward'].sum() * usd_price)
+    print(results.earnings.loc[:, 'daily_reward'].sum() * usd_price)
     print('')
     print('TOTAL WORTH in €: ')
-    print(earnings.loc[:, 'daily_reward'].sum() * eur_price)
+    print(results.earnings.loc[:, 'daily_reward'].sum() * eur_price)
     print('')
 
 def results(earnings,usd_price, eur_price):
@@ -358,11 +358,11 @@ def results(earnings,usd_price, eur_price):
     total_btc_dollar = total_btc * usd_price
     total_btc_eur = total_btc * eur_price
     yesterdays_reward = earnings['daily_reward'].iloc[-2]
-    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward)
+    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price)
 
     return data
 
-def plot_results(earnings):
+def plot_rewards_to_hashrate(earnings):
     earnings.drop(earnings.tail(1).index, inplace=True)
     earnings.drop(earnings.head(10).index, inplace=True)
     fig, ax1 = plt.subplots()
@@ -379,13 +379,46 @@ def plot_results(earnings):
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show()
 
-def main():
-    result = Result().results()
-    # usd_price = get_current_data_USD()['USD']
-    # eur_price = get_current_data_EUR()['EUR']
-    # earnings = get_total_earnings(usd_price, eur_price)
-    # print_results(earnings, usd_price, eur_price)
-    # plot_results(earnings)
+def plot_hodl_vs_sell(earnings):
+    earnings.drop(earnings.tail(1).index, inplace=True)
+    earnings.drop(earnings.head(10).index, inplace=True)
+    fig, ax1 = plt.subplots()
+    color = 'tab:red'
+    ax1.set_xlabel('days')
+    ax1.set_ylabel('$ SELL', color=color)
+    ax1.plot(earnings['rewards_value_at_day_of_mining_usd'], color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
+    ax2.plot(earnings['daily_reward_us'], color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.show()
 
+def load():
+
+    get_file_from_azure('total.csv')
+    df = pd.read_csv('total.csv', index_col=False)
+
+    us_btc_price = get_current_data_USD()['USD']
+    eur_btc_price = get_current_data_EUR()['EUR']
+    total_btc = df.loc[:, 'daily_reward'].sum()
+    total_btc_dollar = total_btc * us_btc_price
+    total_btc_eur = total_btc * eur_btc_price
+    btc_on_exchange = get_btc_wallet_transactions()
+    btc_on_exchange_eur = btc_on_exchange * eur_btc_price
+    btc_in_pools = df.loc[:, 'daily_reward'].sum() - btc_on_exchange
+    btc_in_pools_eur = btc_in_pools * eur_btc_price
+    yesterdays_reward = df['daily_reward'].iloc[-2]
+
+    return Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, df, yesterdays_reward, us_btc_price, eur_btc_price)
+
+def etl():
+    return Result().results()
+
+def main():
+    data = etl()
+    print(data.total_btc)
 
 main()

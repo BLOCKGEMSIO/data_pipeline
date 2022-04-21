@@ -51,8 +51,14 @@ def status(update: Update, context: CallbackContext) -> None:
 
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
-
+    update.message.reply_text('/help\n\n'
+                              '/hashrate\n\n'
+                              '/rewards\n\n'
+                              '/total\n\n'
+                              '/pools\n\n'
+                              '/status\n\n'
+                              '/uptime\n\n'
+                              )
 
 def echo(update: Update, context: CallbackContext) -> None:
     """Echo the user message."""
