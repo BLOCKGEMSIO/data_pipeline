@@ -415,7 +415,10 @@ def load():
     return Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, df, yesterdays_reward, us_btc_price, eur_btc_price)
 
 def etl():
-    return Result().results()
+    us_btc_price = get_current_data_USD()['USD']
+    eur_btc_price = get_current_data_EUR()['EUR']
+    earnings = get_total_earnings(us_btc_price, eur_btc_price)
+    return results(earnings, us_btc_price, eur_btc_price)
 
 def main():
     data = etl()
