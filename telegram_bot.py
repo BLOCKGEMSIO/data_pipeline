@@ -25,28 +25,15 @@ def status(update: Update, context: CallbackContext) -> None:
     yesterdays_reward = result.yesterdays_reward
     yesterdays_reward_eur = yesterdays_reward * btc_price
     yesterdays_reward_eur = round(yesterdays_reward_eur,2)
+    yesterdays_reward_eur = str(yesterdays_reward_eur)
+    yesterdays_reward = str(round(yesterdays_reward,3))
 
-    total_btc = str(total_btc).replace(".", "\\.")
-    total_btc_eur = str(total_btc_eur).replace(".", "\\.")
-    yesterdays_reward = str(yesterdays_reward).replace(".", "\\.")
-    yesterdays_reward_eur = str(yesterdays_reward_eur).replace(".", "\\.")
-
-
-    update.message.reply_markdown_v2(
-        fr'Yesterdays Rewards in BTC: '
-        fr'{yesterdays_reward}',
-        fr' BTC',
-        fr'\n',
-        reply_markup=ForceReply(selective=True),
-    )
-
-    update.message.reply_markdown_v2(
-        fr'Yesterdays income in €: '
-        fr'{yesterdays_reward_eur}',
-        fr' BTC',
-        fr'\n',
-        reply_markup=ForceReply(selective=True),
-    )
+    update.message.reply_text("Yesterdays Rewards:\n"
+                              + yesterdays_reward +
+                              " BTC or "
+                              + yesterdays_reward_eur +
+                              " €\n\n"
+                              "")
 
 def hashrate(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""

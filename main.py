@@ -175,7 +175,35 @@ def get_earnings_luxor():
 
     return df
 
+def get_total_earnings_raw():
+    df_slush = get_earnings_slushpool()
+    df_ant = get_earnings_antpool()
+    df_luxor = get_earnings_luxor()
+
+    df_slush = df_slush.drop_duplicates()
+    df_slush['hoster'] = 'acdc'
+    df_slush['pool'] = 'slushpool'
+    df_ant = df_ant.drop_duplicates()
+    df_ant['hoster'] = 'rosenenergoatom'
+    df_ant['pool'] = 'antpool'
+    df_luxor = df_luxor.drop_duplicates()
+    df_luxor['hoster'] = 'infinitia'
+    df_luxor['pool'] = 'luxor'
+
+    df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
+    df = df.append(df_ant)
+    df = df.append(df_slush)
+    df = df.append(df_luxor)
+
+    df = get_historic_price_usd(df)
+    df = df.drop('rewards_value_at_day_of_mining_usd', 1)
+    df.to_csv('total_raw.csv', index=False)
+    upload_file_to_azure("total_raw.csv")
+    return df
+
+
 def get_total_earnings(usd_price, eur_price):
+    get_total_earnings_raw()
     df = pd.read_csv('layout.csv', index_col=False)
     df_final = pd.read_csv('layout.csv', index_col=False)
     df = df.append(get_earnings_luxor())
