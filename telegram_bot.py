@@ -63,6 +63,7 @@ def save_rewards_plot(earnings):
     ax2.tick_params(axis='y', labelcolor=color)
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.savefig('rewards.png')
+    plt.clf()
 
 def save_pools_plot(raw):
     df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
@@ -108,6 +109,7 @@ def save_pools_plot(raw):
     plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANTPOOL')
     plt.legend()
     plt.savefig('pools.png')
+    plt.clf()
 
 def currency_format(s):
     s = s.replace('.', ',', 1)
