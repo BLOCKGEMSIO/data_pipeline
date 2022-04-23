@@ -30,10 +30,10 @@ def rewards(update: Update, context: CallbackContext) -> None:
     yesterdays_reward = str(round(yesterdays_reward,3)).replace('.', ',', 1)
     total_btc = total_btc.replace('.', ',', 1)
 
-    btc_on_exchange = str(round(result.btc_on_exchange,3))
+    btc_on_exchange = str(round(result.btc_on_exchange,3)).replace('.', ',', 1)
     btc_on_exchange_eur = currency_format(str(round(result.btc_on_exchange_eur,2)))
 
-    btc_in_pools = str(round(result.btc_in_pools,3))
+    btc_in_pools = str(round(result.btc_in_pools,3)).replace('.', ',', 1)
     btc_in_pools_eur = currency_format(str(round(result.btc_in_pools_eur,2)))
 
     update.message.reply_text("Yesterdays Rewards:\n"
@@ -49,14 +49,14 @@ def rewards(update: Update, context: CallbackContext) -> None:
                               + currency_format(str(btc_price)) +
                               "€\n\n"
                               "BTC pending in pools: "
-                              + btc_on_exchange +
-                              " BTC = "
-                              + btc_on_exchange_eur +
-                              "€\n\n"
-                              "BTC payed out to exchanges: "
                               + btc_in_pools +
                               " BTC = "
                               + btc_in_pools_eur +
+                              "€\n\n"
+                              "BTC payed out to exchanges: "
+                              + btc_on_exchange +
+                              " BTC = "
+                              + btc_on_exchange_eur +
                               "€")
 
     save_rewards_plot(result.earnings)
