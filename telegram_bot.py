@@ -50,7 +50,6 @@ def rewards(update: Update, context: CallbackContext) -> None:
 
 def save_pools_plot(raw):
     df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
-    raw.drop(raw.tail(1).index, inplace=True)
     raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
     uniqueValues = raw['timestamp'].unique()
 
@@ -87,7 +86,12 @@ def save_pools_plot(raw):
         df_final = df_final.append(df_temp, ignore_index=True)
 
     df_final = df_final.sort_values(by=['timestamp'])
+    df_final['luxor'] = df_final['luxor'].rolling(7).mean()
+    df_final['slushpool'] = df_final['slushpool'].rolling(7).mean()
+    df_final['antpool'] = df_final['antpool'].rolling(7).mean()
 
+    plt.xlabel("Days")
+    plt.ylabel("Avg Income per PHS")
     plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
     plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
     plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')
