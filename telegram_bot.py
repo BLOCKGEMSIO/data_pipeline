@@ -108,7 +108,7 @@ def save_pools_plot(raw):
     df_final['antpool'] = df_final['antpool'].rolling(3).mean()
 
     plt.xlabel("Days")
-    plt.ylabel("BTC per PHS (3 day SMA)")
+    plt.ylabel("BTC per PHS 24h (3 day SMA)")
     plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
     plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
     plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')

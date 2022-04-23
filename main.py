@@ -436,15 +436,18 @@ def plot_pools(raw):
         for index, row in temp.iterrows():
             if row['pool'] == 'slushpool':
                 df_1 = pd.DataFrame(
-                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float(row['ratio'])], 'luxor': [float('0')]})
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float(row['ratio'])],
+                          'luxor': [float('0')]})
                 df = df.append(df_1)
             elif row['pool'] == 'antpool':
                 df_1 = pd.DataFrame(
-                    data={'timestamp': [row['timestamp']], 'antpool': [float(row['ratio'])], 'slushpool': [float('0')], 'luxor': [float('0')]})
+                    data={'timestamp': [row['timestamp']], 'antpool': [float(row['ratio'])], 'slushpool': [float('0')],
+                          'luxor': [float('0')]})
                 df = df.append(df_1)
             elif row['pool'] == 'luxor':
                 df_1 = pd.DataFrame(
-                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float('0')], 'luxor': [float(row['ratio'])]})
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float('0')],
+                          'luxor': [float(row['ratio'])]})
                 df = df.append(df_1)
             else:
                 exit()
@@ -461,26 +464,18 @@ def plot_pools(raw):
         df_final = df_final.append(df_temp, ignore_index=True)
 
     df_final = df_final.sort_values(by=['timestamp'])
+    df_final.drop(df_final.tail(1).index, inplace=True)
+    df_final['luxor'] = df_final['luxor'].rolling(3).mean()
+    df_final['slushpool'] = df_final['slushpool'].rolling(3).mean()
+    df_final['antpool'] = df_final['antpool'].rolling(3).mean()
 
-    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUXOR')
-    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLUSHPOOL')
-    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANTPOOL')
+    plt.xlabel("Days")
+    plt.ylabel("3d SMA BTC per PHS")
+    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
+    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
+    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')
     plt.legend()
     plt.show()
-
-    # fig, ax1 = plt.subplots()
-    # color = 'tab:red'
-    # ax1.set_xlabel('days')
-    # ax1.set_ylabel('$ SELL', color=color)
-    # ax1.plot(df_final['luxor'], color=color)
-    # ax1.tick_params(axis='y', labelcolor=color)
-    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    # color = 'tab:blue'
-    # ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
-    # ax2.plot(df_final['slushpool'], color=color)
-    # ax2.tick_params(axis='y', labelcolor=color)
-    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    # plt.show()
 
 def load():
 
