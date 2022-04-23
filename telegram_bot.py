@@ -86,12 +86,13 @@ def save_pools_plot(raw):
         df_final = df_final.append(df_temp, ignore_index=True)
 
     df_final = df_final.sort_values(by=['timestamp'])
-    df_final['luxor'] = df_final['luxor'].rolling(7).mean()
-    df_final['slushpool'] = df_final['slushpool'].rolling(7).mean()
-    df_final['antpool'] = df_final['antpool'].rolling(7).mean()
+    df_final.drop(df_final.tail(1).index, inplace=True)
+    df_final['luxor'] = df_final['luxor'].rolling(3).mean()
+    df_final['slushpool'] = df_final['slushpool'].rolling(3).mean()
+    df_final['antpool'] = df_final['antpool'].rolling(3).mean()
 
     plt.xlabel("Days")
-    plt.ylabel("Avg Income per PHS")
+    plt.ylabel("3d SMA BTC per PHS")
     plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
     plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
     plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')
