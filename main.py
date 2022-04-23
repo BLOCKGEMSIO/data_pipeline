@@ -351,6 +351,7 @@ def upload_file_to_azure(s):
 def print_results(results):
     usd_price = results.us_btc_price
     eur_price = results.eur_btc_price
+
     btc_on_exchange = get_btc_wallet_transactions()
     btc_on_exchange_eur = btc_on_exchange * eur_price
     btc_in_pools = results.earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
@@ -426,7 +427,6 @@ def plot_hodl_vs_sell(earnings):
     plt.show()
 
 def plot_pools(raw):
-
     df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
     raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
     uniqueValues = raw['timestamp'].unique()
@@ -462,19 +462,25 @@ def plot_pools(raw):
 
     df_final = df_final.sort_values(by=['timestamp'])
 
-    fig, ax1 = plt.subplots()
-    color = 'tab:red'
-    ax1.set_xlabel('days')
-    ax1.set_ylabel('$ SELL', color=color)
-    ax1.plot(df_final['luxor'], color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    color = 'tab:blue'
-    ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
-    ax2.plot(df_final['slushpool'], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUXOR')
+    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLUSHPOOL')
+    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANTPOOL')
+    plt.legend()
     plt.show()
+
+    # fig, ax1 = plt.subplots()
+    # color = 'tab:red'
+    # ax1.set_xlabel('days')
+    # ax1.set_ylabel('$ SELL', color=color)
+    # ax1.plot(df_final['luxor'], color=color)
+    # ax1.tick_params(axis='y', labelcolor=color)
+    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    # color = 'tab:blue'
+    # ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
+    # ax2.plot(df_final['slushpool'], color=color)
+    # ax2.tick_params(axis='y', labelcolor=color)
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # plt.show()
 
 def load():
 
@@ -482,7 +488,7 @@ def load():
     df = pd.read_csv('total.csv', index_col=False)
 
     get_file_from_azure('total_raw.csv')
-    df_raw = pd.read_csv('total.csv', index_col=False)
+    df_raw = pd.read_csv('total_raw.csv', index_col=False)
 
     us_btc_price = get_current_data_USD()['USD']
     eur_btc_price = get_current_data_EUR()['EUR']
@@ -507,7 +513,5 @@ def etl():
 def main():
     data = etl()
     print(data.total_btc)
-
-    #plot_pools(data.raw)
 
 main()

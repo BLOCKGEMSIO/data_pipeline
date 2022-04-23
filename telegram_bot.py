@@ -1,5 +1,6 @@
 import logging
 import matplotlib.pyplot as plt
+import pandas as pd
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from main import Result
@@ -63,6 +64,51 @@ def save_rewards_plot(earnings):
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.savefig('rewards.png')
 
+def save_pools_plot(raw):
+    df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
+    raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
+    uniqueValues = raw['timestamp'].unique()
+
+    for x in uniqueValues:
+        temp = raw.query('timestamp == "' + x + '"')
+        for index, row in temp.iterrows():
+            if row['pool'] == 'slushpool':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float(row['ratio'])],
+                          'luxor': [float('0')]})
+                df = df.append(df_1)
+            elif row['pool'] == 'antpool':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float(row['ratio'])], 'slushpool': [float('0')],
+                          'luxor': [float('0')]})
+                df = df.append(df_1)
+            elif row['pool'] == 'luxor':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float('0')],
+                          'luxor': [float(row['ratio'])]})
+                df = df.append(df_1)
+            else:
+                exit()
+
+    uniqueValues = df['timestamp'].unique()
+    df_final = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
+
+    for x in uniqueValues:
+        temp = df.query('timestamp == "' + x + '"')
+        antpool = temp.loc[:, 'antpool'].sum()
+        slushpool = temp.loc[:, 'slushpool'].sum()
+        luxor = temp.loc[:, 'luxor'].sum()
+        df_temp = {'timestamp': x, 'antpool': float(antpool), 'slushpool': float(slushpool), 'luxor': float(luxor)}
+        df_final = df_final.append(df_temp, ignore_index=True)
+
+    df_final = df_final.sort_values(by=['timestamp'])
+
+    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUXOR')
+    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLUSHPOOL')
+    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANTPOOL')
+    plt.legend()
+    plt.savefig('pools.png')
+
 def currency_format(s):
     s = s.replace('.', ',', 1)
     length = s.find(',')
@@ -110,11 +156,12 @@ def status(update: Update, context: CallbackContext) -> None:
 
 def pools(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
+    result = Result().results()
+    save_pools_plot(result.raw)
+    chat_id = update.message.chat_id
+    document = open('pools.png', 'rb')
+    context.bot.send_document(chat_id, document)
 
-    update.message.reply_markdown_v2(
-        fr'Under Construction ' + u'🚨',
-        reply_markup=ForceReply(selective=True),
-    )
 
 def uptime(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
