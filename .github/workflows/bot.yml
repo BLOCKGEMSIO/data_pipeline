@@ -1,0 +1,17 @@
+name: Crone Job
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.7'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - run: python telegram_bot.py
