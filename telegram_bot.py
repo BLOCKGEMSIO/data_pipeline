@@ -48,25 +48,9 @@ def rewards(update: Update, context: CallbackContext) -> None:
     document = open('rewards.png', 'rb')
     context.bot.send_document(chat_id, document)
 
-def save_rewards_plot(earnings):
-    earnings.drop(earnings.tail(1).index, inplace=True)
-    fig, ax1 = plt.subplots()
-    color = 'tab:red'
-    ax1.set_xlabel('days')
-    ax1.set_ylabel('reward 24h in btc', color=color)
-    ax1.plot(earnings['daily_reward'], color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    color = 'tab:blue'
-    ax2.set_ylabel('blockgems hashrate in ph', color=color)  # we already handled the x-label with ax1
-    ax2.plot(earnings['hashrate_in_phs'], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    plt.savefig('rewards.png')
-    plt.clf()
-
 def save_pools_plot(raw):
     df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
+    raw.drop(raw.tail(1).index, inplace=True)
     raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
     uniqueValues = raw['timestamp'].unique()
 
@@ -104,11 +88,28 @@ def save_pools_plot(raw):
 
     df_final = df_final.sort_values(by=['timestamp'])
 
-    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUXOR')
-    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLUSHPOOL')
-    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANTPOOL')
+    plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
+    plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
+    plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')
     plt.legend()
     plt.savefig('pools.png')
+    plt.clf()
+
+def save_rewards_plot(earnings):
+    earnings.drop(earnings.tail(1).index, inplace=True)
+    fig, ax1 = plt.subplots()
+    color = 'tab:red'
+    ax1.set_xlabel('days')
+    ax1.set_ylabel('reward 24h in btc', color=color)
+    ax1.plot(earnings['daily_reward'], color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('blockgems hashrate in ph', color=color)  # we already handled the x-label with ax1
+    ax2.plot(earnings['hashrate_in_phs'], color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.savefig('rewards.png')
     plt.clf()
 
 def currency_format(s):
