@@ -15,7 +15,7 @@ sign_SECRET = '73939395118c445a8608c3c6e88a9527'  # 密码
 html_payment = 'https://antpool.com/api/paymentHistoryV2.htm'
 
 class Data:
-    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price):
+    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price, raw):
         self.total_btc = total_btc
         self.total_btc_dollar = total_btc_dollar
         self.total_btc_eur = total_btc_eur
@@ -27,6 +27,7 @@ class Data:
         self.yesterdays_reward = yesterdays_reward
         self.us_btc_price = us_btc_price
         self.eur_btc_price = eur_btc_price
+        self.raw = raw
 
 class Result:
   def results(self):
@@ -377,7 +378,7 @@ def print_results(results):
     print(results.earnings.loc[:, 'daily_reward'].sum() * eur_price)
     print('')
 
-def results(earnings,usd_price, eur_price):
+def results(earnings, raw, usd_price, eur_price):
     btc_on_exchange = get_btc_wallet_transactions()
     btc_on_exchange_eur = btc_on_exchange * eur_price
     btc_in_pools = earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
@@ -386,7 +387,7 @@ def results(earnings,usd_price, eur_price):
     total_btc_dollar = total_btc * usd_price
     total_btc_eur = total_btc * eur_price
     yesterdays_reward = earnings['daily_reward'].iloc[-2]
-    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price)
+    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price, raw)
 
     return data
 
@@ -424,10 +425,64 @@ def plot_hodl_vs_sell(earnings):
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show()
 
+def plot_pools(raw):
+
+    df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
+    raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
+    uniqueValues = raw['timestamp'].unique()
+
+    for x in uniqueValues:
+        temp = raw.query('timestamp == "' + x + '"')
+        for index, row in temp.iterrows():
+            if row['pool'] == 'slushpool':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float(row['ratio'])], 'luxor': [float('0')]})
+                df = df.append(df_1)
+            elif row['pool'] == 'antpool':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float(row['ratio'])], 'slushpool': [float('0')], 'luxor': [float('0')]})
+                df = df.append(df_1)
+            elif row['pool'] == 'luxor':
+                df_1 = pd.DataFrame(
+                    data={'timestamp': [row['timestamp']], 'antpool': [float('0')], 'slushpool': [float('0')], 'luxor': [float(row['ratio'])]})
+                df = df.append(df_1)
+            else:
+                exit()
+
+    uniqueValues = df['timestamp'].unique()
+    df_final = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
+
+    for x in uniqueValues:
+        temp = df.query('timestamp == "' + x + '"')
+        antpool = temp.loc[:, 'antpool'].sum()
+        slushpool = temp.loc[:, 'slushpool'].sum()
+        luxor = temp.loc[:, 'luxor'].sum()
+        df_temp = {'timestamp': x, 'antpool': float(antpool), 'slushpool': float(slushpool), 'luxor': float(luxor)}
+        df_final = df_final.append(df_temp, ignore_index=True)
+
+    df_final = df_final.sort_values(by=['timestamp'])
+
+    fig, ax1 = plt.subplots()
+    color = 'tab:red'
+    ax1.set_xlabel('days')
+    ax1.set_ylabel('$ SELL', color=color)
+    ax1.plot(df_final['luxor'], color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
+    ax2.plot(df_final['slushpool'], color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.show()
+
 def load():
 
     get_file_from_azure('total.csv')
     df = pd.read_csv('total.csv', index_col=False)
+
+    get_file_from_azure('total_raw.csv')
+    df_raw = pd.read_csv('total.csv', index_col=False)
 
     us_btc_price = get_current_data_USD()['USD']
     eur_btc_price = get_current_data_EUR()['EUR']
@@ -440,16 +495,19 @@ def load():
     btc_in_pools_eur = btc_in_pools * eur_btc_price
     yesterdays_reward = df['daily_reward'].iloc[-2]
 
-    return Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, df, yesterdays_reward, us_btc_price, eur_btc_price)
+    return Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, df, yesterdays_reward, us_btc_price, eur_btc_price, df_raw)
 
 def etl():
     us_btc_price = get_current_data_USD()['USD']
     eur_btc_price = get_current_data_EUR()['EUR']
     earnings = get_total_earnings(us_btc_price, eur_btc_price)
-    return results(earnings, us_btc_price, eur_btc_price)
+    raw = get_total_earnings_raw()
+    return results(earnings, raw, us_btc_price, eur_btc_price)
 
 def main():
     data = etl()
     print(data.total_btc)
+
+    #plot_pools(data.raw)
 
 main()
