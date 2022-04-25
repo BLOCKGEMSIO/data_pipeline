@@ -5,13 +5,15 @@ from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from main import Result
 
+import main
+from main import Data
+
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
-
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.

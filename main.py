@@ -1,8 +1,10 @@
+import pickle
 import time
 import hmac, hashlib
 import json
 import pandas as pd
 import requests
+import dill
 import cryptocmd
 from requests.structures import CaseInsensitiveDict
 import datetime
@@ -15,7 +17,7 @@ sign_SECRET = '73939395118c445a8608c3c6e88a9527'  # 密码
 html_payment = 'https://antpool.com/api/paymentHistoryV2.htm'
 
 class Data:
-    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price, raw):
+    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price, raw, timestamp):
         self.total_btc = total_btc
         self.total_btc_dollar = total_btc_dollar
         self.total_btc_eur = total_btc_eur
@@ -28,10 +30,11 @@ class Data:
         self.us_btc_price = us_btc_price
         self.eur_btc_price = eur_btc_price
         self.raw = raw
+        self.timestamp = timestamp
 
 class Result:
   def results(self):
-      return load()
+      return get_data()
 
 def get_signature():  # 签名操作
     nonce = int(time.time() * 1000)  # 毫秒时间戳
@@ -195,8 +198,10 @@ def get_total_earnings_raw():
     df = df.append(df_ant)
     df = df.append(df_slush)
     df = df.append(df_luxor)
-
     df = get_historic_price_usd(df)
+    from datetime import date
+    today = str(date.today())
+    df = df[df.timestamp != today]
     df = df.drop('rewards_value_at_day_of_mining_usd', 1)
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
@@ -388,7 +393,9 @@ def results(earnings, raw, usd_price, eur_price):
     total_btc_dollar = total_btc * usd_price
     total_btc_eur = total_btc * eur_price
     yesterdays_reward = earnings['daily_reward'].iloc[-2]
-    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price, raw)
+    from datetime import datetime
+    today = datetime.now()
+    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price, raw, today)
 
     return data
 
@@ -468,6 +475,7 @@ def plot_pools(raw):
     df_final['luxor'] = df_final['luxor'].rolling(3).mean()
     df_final['slushpool'] = df_final['slushpool'].rolling(3).mean()
     df_final['antpool'] = df_final['antpool'].rolling(3).mean()
+    df_final['hashrate'] = 0
 
     plt.xlabel("Days")
     plt.ylabel("3d SMA BTC per PHS")
@@ -477,36 +485,33 @@ def plot_pools(raw):
     plt.legend()
     plt.show()
 
-def load():
-
-    get_file_from_azure('total.csv')
-    df = pd.read_csv('total.csv', index_col=False)
-
-    get_file_from_azure('total_raw.csv')
-    df_raw = pd.read_csv('total_raw.csv', index_col=False)
-
-    us_btc_price = get_current_data_USD()['USD']
-    eur_btc_price = get_current_data_EUR()['EUR']
-    total_btc = df.loc[:, 'daily_reward'].sum()
-    total_btc_dollar = total_btc * us_btc_price
-    total_btc_eur = total_btc * eur_btc_price
-    btc_on_exchange = get_btc_wallet_transactions()
-    btc_on_exchange_eur = btc_on_exchange * eur_btc_price
-    btc_in_pools = df.loc[:, 'daily_reward'].sum() - btc_on_exchange
-    btc_in_pools_eur = btc_in_pools * eur_btc_price
-    yesterdays_reward = df['daily_reward'].iloc[-2]
-
-    return Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, df, yesterdays_reward, us_btc_price, eur_btc_price, df_raw)
-
 def etl():
     us_btc_price = get_current_data_USD()['USD']
     eur_btc_price = get_current_data_EUR()['EUR']
     earnings = get_total_earnings(us_btc_price, eur_btc_price)
     raw = get_total_earnings_raw()
-    return results(earnings, raw, us_btc_price, eur_btc_price)
+    data = results(earnings, raw, us_btc_price, eur_btc_price)
+
+    with open('data.pickle', 'wb') as io:
+        dill.dump(data, io)
+
+    upload_file_to_azure('data.pickle')
+    return data
+
+def load_from_cache():
+    get_file_from_azure('data.pickle')
+    with open('data.pickle', 'rb') as io:
+        data = dill.load(io)
+    return data
+
+def get_data():
+    data = load_from_cache()
+    if (data.timestamp < datetime.datetime.now() - datetime.timedelta(minutes=15)):
+        return etl()
+    return data
 
 def main():
-    data = etl()
+    data = get_data()
     print(data.total_btc)
 
 main()
