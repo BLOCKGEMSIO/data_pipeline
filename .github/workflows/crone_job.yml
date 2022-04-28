@@ -2,7 +2,7 @@ name: Crone Job
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "* */12 * * *"
 
 jobs:
   build:
@@ -20,4 +20,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: downloads
-          path: uploads
+          path
+          : uploads
