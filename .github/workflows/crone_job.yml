@@ -2,7 +2,7 @@ name: Crone Job
 
 on:
   schedule:
-    - cron: "* */12 * * *"
+    - cron: "*/20 * * * *"
 
 jobs:
   build:
@@ -15,10 +15,3 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt
       - run: python main.py
-      - run: mkdir uploads
-      - run: mv data.pickle uploads
-      - uses: actions/upload-artifact@v3
-        with:
-          name: downloads
-          path
-          : uploads
