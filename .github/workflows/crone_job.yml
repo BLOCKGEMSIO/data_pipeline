@@ -2,7 +2,7 @@ name: Crone Job
 
 on:
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "0 4 * * *"
 
 jobs:
   build:
@@ -14,4 +14,4 @@ jobs:
           python-version: '3.7'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - run: python main.py
+      - run: python etl.py

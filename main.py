@@ -1,439 +1,72 @@
-import pickle
-import time
-import hmac, hashlib
-import json
-import pandas as pd
-import requests
-import dill
-import cryptocmd
-from requests.structures import CaseInsensitiveDict
-import datetime
+import logging
 import matplotlib.pyplot as plt
-
-coin_type = 'BTC'  # 币种
-sign_id = 'BLOCKGEMS'  # 子账号名
-sign_key = '12eecb4cf25e4fa684c906fa98a803a7'  # 密钥
-sign_SECRET = '73939395118c445a8608c3c6e88a9527'  # 密码
-html_payment = 'https://antpool.com/api/paymentHistoryV2.htm'
-
-class Data:
-    def __init__(self, total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, us_btc_price, eur_btc_price, raw, timestamp):
-        self.total_btc = total_btc
-        self.total_btc_dollar = total_btc_dollar
-        self.total_btc_eur = total_btc_eur
-        self.btc_in_pools = btc_in_pools
-        self.btc_in_pools_eur = btc_in_pools_eur
-        self.btc_on_exchange = btc_on_exchange
-        self.btc_on_exchange_eur = btc_on_exchange_eur
-        self.earnings = earnings
-        self.yesterdays_reward = yesterdays_reward
-        self.us_btc_price = us_btc_price
-        self.eur_btc_price = eur_btc_price
-        self.raw = raw
-        self.timestamp = timestamp
-
-class Result:
-  def results(self):
-      return get_data()
-
-def get_signature():  # 签名操作
-    nonce = int(time.time() * 1000)  # 毫秒时间戳
-    msgs = sign_id + sign_key + str(nonce)
-    ret = []
-    ret.append(hmac.new(sign_SECRET.encode(encoding="utf-8"), msg=msgs.encode(encoding="utf-8"),
-                        digestmod=hashlib.sha256).hexdigest().upper())  # 签名
-    ret.append(nonce)  # 时间戳
-    return ret
-
-
-def get_earnings_antpool():  # POST
-    get_file_from_azure("antpool.csv")
-    api_sign = get_signature()
-    post_data = {'key': sign_key, 'nonce': api_sign[1], 'signature': api_sign[0], 'coin': coin_type, 'type': 'recv',
-                 'pageSize': 50}  # 这里是POST参数根据接口自行更改
-    request = requests.post(html_payment, data=post_data)
-    json_object_response = json.loads(request.text)
-    json_object_data = json_object_response["data"]
-    json_object_rows = json_object_data["rows"]
-    df = pd.read_json(json.dumps(json_object_rows))
-    df = df.drop(
-        columns=['fppsFeeAmount', 'fppsBlockAmount', 'ppappsAmount', 'ppapplnsAmount', 'soloAmount', 'ppsAmount',
-                 'hashrate_unit'])
-    df = df.rename(columns={"hashrate": "hashrate_in_phs", "pplnsAmount": "daily_reward"})
-
-    for index, row in df.iterrows():
-        value = str(row['hashrate_in_phs'])
-
-        if value.find("PH/s") != -1:
-            value = value.replace('PH/s', '')
-            df.at[index, 'hashrate_in_phs'] = value
-        elif value.find("TH/s") != -1:
-            value = value.replace('TH/s', '')
-            value = float(value)
-            value = value / 1000
-            df.at[index, 'hashrate_in_phs'] = value
-
-    df.to_csv('temp.csv', index=False)
-    df_old = pd.read_csv('antpool.csv', index_col=False)
-    df = pd.read_csv('temp.csv', index_col=False)
-    df = df.append(df_old)
-    df = df.drop_duplicates()
-    df.to_csv('antpool.csv', index=False)
-    df = pd.read_csv('antpool.csv', index_col=False)
-    upload_file_to_azure('antpool.csv')
-    return (df)
-
-
-def key_in_json_old(key, json_old):
-    for x in json_old:
-        if x[0] == int(key):
-            return True;
-    return False;
-
-def get_earnings_slushpool():
-    get_file_from_azure('slushpool.json')
-    url = "https://slushpool.com/stats/json/btc/"
-    headers = CaseInsensitiveDict()
-    headers["SlushPool-Auth-Token"] = "IX5ZydZKgFqDjU5E"
-    resp = requests.get(url, headers=headers)
-    json_new = json.loads(resp.text)
-
-    with open('slushpool.json') as json_file:
-        json_old = json.load(json_file)
-
-    json_btc_new = json_new["btc"]
-    json_blocks_new = json_btc_new["blocks"]
-
-    for key, value in json_blocks_new.items():
-        if key_in_json_old(key,json_old):
-           continue;
-        else:
-            temp = json_blocks_new[key]
-            user_reward = temp["user_reward"]
-
-            if user_reward is None:
-                continue;
-
-            date = temp["date_found"]
-            date = datetime.datetime.fromtimestamp(date)
-            value = temp["value"]
-            pool_scoring_hash_rate = temp["pool_scoring_hash_rate"]
-            hashrate = ((float(user_reward) / float(value)) * pool_scoring_hash_rate) * 1.02
-
-            item = [int(key), str(date), str(value), float(pool_scoring_hash_rate), float(hashrate), str(user_reward)]
-            json_old.insert(len(json_old)-1, item)
-
-    with open('slushpool.json', 'w') as outfile:
-        json.dump(json_old, outfile)
-
-    df = pd.read_csv('layout.csv', index_col=False)
-    del json_old[0]
-    json_df = pd.DataFrame(json_old, columns=["height", "found_at", "value", "pool_scoring_hashrate_ghps", "user_scoring_hashrate_ghps", "user_reward"])
-    json_df.transpose()
-    json_df = json_df.sort_values(by=['height'])
-    json_df['found_at_transposed'] = pd.to_datetime(json_df['found_at']).dt.date
-    uniqueValues = json_df['found_at_transposed'].unique()
-
-    for x in uniqueValues:
-        temp = json_df.loc[json_df['found_at_transposed'] == x]
-        temp['user_reward'] = temp['user_reward'].astype(float)
-        daily_rewards = temp.loc[:, 'user_reward'].sum()
-        daily_hash_rate = temp['user_scoring_hashrate_ghps'].sum() / len(temp.index)
-
-        df_temp = {'timestamp': x, 'hashrate_in_phs': daily_hash_rate / 1000000, 'daily_reward': float(daily_rewards)}
-        df = df.append(df_temp, ignore_index=True)
-
-    df.to_csv('slushpool.csv', index=False)
-    df = pd.read_csv('slushpool.csv', index_col=False)
-    upload_file_to_azure('slushpool.json')
-    upload_file_to_azure('slushpool.csv')
-
-    return df
-
-def get_earnings_luxor():
-    from luxor import API
-
-    get_file_from_azure('luxor.csv')
-
-    API = API(host='https://api.beta.luxor.tech/graphql', method='POST', org='luxor',
-              key='lxk.421a09f9f4586e75c71012b666ad97d3')
-    resp = API.get_hashrate_score_history("blockgems_paraguay", "BTC", 100)
-    resp = json.dumps(resp)
-    resp = json.loads(resp)
-    resp = resp["data"]
-    resp = resp["getHashrateScoreHistory"]
-    resp = resp["nodes"]
-    df = pd.read_csv('layout.csv', index_col=False)
-
-    for x in resp:
-        hashrate = float(x["hashrate"]) / 1000000000000000
-        reward = float(x["revenue"])
-        timestamp = x["date"].replace('T00:00:00+00:00',"")
-        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
-        df = df.append(temp, ignore_index=True)
-
-    df = df.drop_duplicates()
-    df.to_csv('luxor.csv', index=False)
-    df = pd.read_csv('luxor.csv', index_col=False)
-    upload_file_to_azure('luxor.csv')
-
-    return df
-
-def get_total_earnings_raw():
-    df_slush = get_earnings_slushpool()
-    df_ant = get_earnings_antpool()
-    df_luxor = get_earnings_luxor()
-
-    df_slush = df_slush.drop_duplicates()
-    df_slush['hoster'] = 'acdc'
-    df_slush['pool'] = 'slushpool'
-    df_ant = df_ant.drop_duplicates()
-    df_ant['hoster'] = 'rosenenergoatom'
-    df_ant['pool'] = 'antpool'
-    df_luxor = df_luxor.drop_duplicates()
-    df_luxor['hoster'] = 'infinitia'
-    df_luxor['pool'] = 'luxor'
-
-    df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
-    df = df.append(df_ant)
-    df = df.append(df_slush)
-    df = df.append(df_luxor)
-    df = get_historic_price_usd(df)
-    from datetime import date
-    today = str(date.today())
-    df = df[df.timestamp != today]
-    df = df.drop('rewards_value_at_day_of_mining_usd', 1)
-    df.to_csv('total_raw.csv', index=False)
-    upload_file_to_azure("total_raw.csv")
-    return df
-
-
-def get_total_earnings(usd_price, eur_price):
-    get_total_earnings_raw()
-    df = pd.read_csv('layout.csv', index_col=False)
-    df_final = pd.read_csv('layout.csv', index_col=False)
-    df = df.append(get_earnings_luxor())
-    df = df.append(get_earnings_slushpool())
-    df = df.append(get_earnings_antpool())
-    df = df.drop_duplicates()
-    uniqueValues = df['timestamp'].unique()
-
-    for x in uniqueValues:
-        temp = df.query('timestamp == "' + x + '"')
-        daily_rewards = temp.loc[:, 'daily_reward'].sum()
-        daily_hash_rate = temp['hashrate_in_phs'].sum()
-        btc_per_ph = daily_rewards / daily_hash_rate
-        df_temp = {'timestamp': x, 'hashrate_in_phs': daily_hash_rate, 'daily_reward': float(daily_rewards), '24h_btc_per_ph': float(btc_per_ph)}
-        df_final = df_final.append(df_temp, ignore_index=True)
-
-    df_final = df_final.drop_duplicates().sort_values(by = 'timestamp')
-    df_final = transform_to_cummulated(df_final)
-    df_final = add_prices(df_final, usd_price, eur_price)
-    df_final = df_final.round(5)
-    df_final = get_historic_price_usd(df_final)
-    df_final['daily_reward_cum_eur'] = df_final['daily_reward_cum_eur'].round(2)
-    df_final['daily_reward_cum_us'] = df_final['daily_reward_cum_us'].round(2)
-    df_final['hashrate_in_phs'] = df_final['hashrate_in_phs'].round(2)
-    df_final['rewards_value_at_day_of_mining_usd'] = df_final['rewards_value_at_day_of_mining_usd'].round(2)
-    df_final['btc_day_close_price_usd'] = df_final['btc_day_close_price_usd'].round(2)
-    df_final['btc_day_low_price_usd'] = df_final['btc_day_low_price_usd'].round(2)
-    df_final['btc_day_high_price_usd'] = df_final['btc_day_high_price_usd'].round(2)
-    df_final['btc_day_open_price_usd'] = df_final['btc_day_open_price_usd'].round(2)
-    df_final['daily_reward_eur'] = df_final['daily_reward_eur'].round(2)
-    df_final['daily_reward_us'] = df_final['daily_reward_us'].round(2)
-    df_final.to_csv('total.csv', index=False)
-    df_final = pd.read_csv('total.csv', index_col=False)
-    upload_file_to_azure('total.csv')
-    return df_final
-
-
-def get_current_data_USD(from_sym='BTC', to_sym='USD', exchange=''):
-    url = 'https://min-api.cryptocompare.com/data/price'
-
-    parameters = {'fsym': from_sym,
-                  'tsyms': to_sym}
-
-    if exchange:
-        print('exchange: ', exchange)
-        parameters['e'] = exchange
-
-    # response comes as json
-    response = requests.get(url, params=parameters)
-    data = response.json()
-
-    return data
-
-def get_current_data_EUR(from_sym='BTC', to_sym='EUR', exchange=''):
-    url = 'https://min-api.cryptocompare.com/data/price'
-
-    parameters = {'fsym': from_sym,
-                  'tsyms': to_sym}
-
-    if exchange:
-        print('exchange: ', exchange)
-        parameters['e'] = exchange
-
-    # response comes as json
-    response = requests.get(url, params=parameters)
-    data = response.json()
-
-    return data
-
-def transform_to_cummulated(df):
-    df['daily_reward_cum'] = df.daily_reward.cumsum()
-    return df
-
-def add_prices(df, usd_price, eur_price):
-    df['daily_reward_cum_us'] = df['daily_reward_cum'] * usd_price
-    df['daily_reward_cum_eur'] = df['daily_reward_cum'] * eur_price
-    df['daily_reward_us'] = df['daily_reward'] * usd_price
-    df['daily_reward_eur'] = df['daily_reward'] * eur_price
-    return df
-
-def get_btc_wallet_transactions():
-    your_btc_address = '3QUSvpQ6d2UptXHiKCFKJRNJSZbjF7Ga6C'  # Genesis Block
-    transactions_url = 'https://blockchain.info/rawaddr/' + your_btc_address
-    df = pd.read_json(transactions_url)
-    return df['total_received'][0] / 100000000
-
-def transpose(date):
-    return datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
-
-def get_historic_price_usd(df):
-    start_date = min(df['timestamp'])
-    end_date = max(df['timestamp'])
-    price_data = get_price_for_date(transpose(start_date), transpose(end_date))
-    price_data = price_data.rename(columns={"Date": "timestamp"})
-    price_data = price_data.rename(columns={"Open": "btc_day_open_price_usd"})
-    price_data = price_data.rename(columns={"High": "btc_day_high_price_usd"})
-    price_data = price_data.rename(columns={"Low": "btc_day_low_price_usd"})
-    price_data = price_data.rename(columns={"Close": "btc_day_close_price_usd"})
-    price_data.drop(['Volume', 'Market Cap'], axis=1, inplace=True)
-    price_data['timestamp'] = price_data['timestamp'].dt.strftime('%Y-%m-%d')
-    df = pd.merge(df, price_data, how='left')
-    df['rewards_value_at_day_of_mining_usd'] = df['daily_reward'] * df['btc_day_close_price_usd']
-
-    return df
-
-def get_price_for_date(start_date, end_date):
-    from cryptocmd import CmcScraper
-    scraper = CmcScraper("BTC", start_date, end_date)
-    return scraper.get_dataframe()
-
-def get_file_from_azure(s):
-    from azure.storage.blob import BlobServiceClient
-
-    STORAGEACCOUNTURL = "https://blockgems.blob.core.windows.net"
-    STORAGEACCOUNTKEY = "s/pN8kuq//BqbT+pMysvLjeguuhw/UFvW+mHlhpR2gGykMFgI8GpfPDa70K2icBlCI6RDakck7GSO0g3aW1WwA=="
-    CONTAINERNAME = "blockgems"
-
-    blob_service_client_instance = BlobServiceClient(
-        account_url=STORAGEACCOUNTURL, credential=STORAGEACCOUNTKEY)
-
-    blob_client_instance = blob_service_client_instance.get_blob_client(
-        CONTAINERNAME, s, snapshot=None)
-
-    with open(s, "wb") as my_blob:
-        download_stream = blob_client_instance.download_blob()
-        my_blob.write(download_stream.readall())
-
-def upload_file_to_azure(s):
-    from azure.storage.blob import BlobServiceClient
-
-    STORAGEACCOUNTURL = "https://blockgems.blob.core.windows.net"
-    STORAGEACCOUNTKEY = "s/pN8kuq//BqbT+pMysvLjeguuhw/UFvW+mHlhpR2gGykMFgI8GpfPDa70K2icBlCI6RDakck7GSO0g3aW1WwA=="
-    CONTAINERNAME = "blockgems"
-
-    blob_service_client_instance = BlobServiceClient(
-        account_url=STORAGEACCOUNTURL, credential=STORAGEACCOUNTKEY)
-
-    blob_client_instance = blob_service_client_instance.get_blob_client(
-        CONTAINERNAME, s, snapshot=None)
-
-    with open(s, "rb") as data:
-        blob_client_instance.upload_blob(data, blob_type="BlockBlob",overwrite=True)
-
-def print_results(results):
-    usd_price = results.us_btc_price
-    eur_price = results.eur_btc_price
-
-    btc_on_exchange = get_btc_wallet_transactions()
-    btc_on_exchange_eur = btc_on_exchange * eur_price
-    btc_in_pools = results.earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
-    btc_in_pools_eur = btc_in_pools * eur_price
-
-    print(results.earnings)
-    print('')
-    print('TOTAL BTC MINED: ')
-    print(results.earnings.loc[:, 'daily_reward'].sum())
-
-    print('')
-    print('BTC PENDING IN POOLS: ')
-    print(btc_in_pools)
-    print(btc_in_pools_eur)
-    print('')
-    print('BTC Payed out to Exchanges: ')
-    print(btc_on_exchange)
-    print(btc_on_exchange_eur)
-
-    print('')
-    print('TOTAL WORTH in $: ')
-    print(results.earnings.loc[:, 'daily_reward'].sum() * usd_price)
-    print('')
-    print('TOTAL WORTH in €: ')
-    print(results.earnings.loc[:, 'daily_reward'].sum() * eur_price)
-    print('')
-
-def results(earnings, raw, usd_price, eur_price):
-    btc_on_exchange = get_btc_wallet_transactions()
-    btc_on_exchange_eur = btc_on_exchange * eur_price
-    btc_in_pools = earnings.loc[:, 'daily_reward'].sum() - btc_on_exchange
-    btc_in_pools_eur = btc_in_pools * eur_price
-    total_btc = earnings.loc[:, 'daily_reward'].sum()
-    total_btc_dollar = total_btc * usd_price
-    total_btc_eur = total_btc * eur_price
-    yesterdays_reward = earnings['daily_reward'].iloc[-2]
-    from datetime import datetime
-    today = datetime.now()
-    data = Data(total_btc, total_btc_dollar, total_btc_eur, btc_in_pools, btc_in_pools_eur, btc_on_exchange, btc_on_exchange_eur, earnings, yesterdays_reward, usd_price, eur_price, raw, today)
-
-    return data
-
-def plot_rewards_to_hashrate(earnings):
-    earnings.drop(earnings.tail(1).index, inplace=True)
-    earnings.drop(earnings.head(10).index, inplace=True)
-    fig, ax1 = plt.subplots()
-    color = 'tab:red'
-    ax1.set_xlabel('days')
-    ax1.set_ylabel('reward 24h in btc', color=color)
-    ax1.plot(earnings['daily_reward'], color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    color = 'tab:blue'
-    ax2.set_ylabel('blockgems hashrate in ph', color=color)  # we already handled the x-label with ax1
-    ax2.plot(earnings['hashrate_in_phs'], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    plt.show()
-
-def plot_hodl_vs_sell(earnings):
-    earnings.drop(earnings.tail(1).index, inplace=True)
-    earnings.drop(earnings.head(10).index, inplace=True)
-    fig, ax1 = plt.subplots()
-    color = 'tab:red'
-    ax1.set_xlabel('days')
-    ax1.set_ylabel('$ SELL', color=color)
-    ax1.plot(earnings['rewards_value_at_day_of_mining_usd'], color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    color = 'tab:blue'
-    ax2.set_ylabel('$ HODL', color=color)  # we already handled the x-label with ax1
-    ax2.plot(earnings['daily_reward_us'], color=color)
-    ax2.tick_params(axis='y', labelcolor=color)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    plt.show()
-
-def plot_pools(raw):
+import pandas as pd
+from telegram import Update, ForceReply
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from etl import Result
+
+import etl
+from etl import Data
+
+# Enable logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+
+# Define a few command handlers. These usually take the two arguments update and
+# context.
+def rewards(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+    user = update.effective_user
+
+    result = Result().results()
+    total_btc = str(round(result.total_btc,3))
+    total_btc_eur = str(round(result.total_btc_eur,2))
+    btc_price = round(float(total_btc_eur) / float(total_btc),2)
+    yesterdays_reward = result.yesterdays_reward
+    yesterdays_reward_eur = yesterdays_reward * btc_price
+    yesterdays_reward_eur = round(yesterdays_reward_eur,2)
+    yesterdays_reward_eur = str(yesterdays_reward_eur)
+    yesterdays_reward = str(round(yesterdays_reward,3)).replace('.', ',', 1)
+    total_btc = total_btc.replace('.', ',', 1)
+
+    btc_on_exchange = str(round(result.btc_on_exchange,3)).replace('.', ',', 1)
+    btc_on_exchange_eur = currency_format(str(round(result.btc_on_exchange_eur,2)))
+
+    btc_in_pools = str(round(result.btc_in_pools,3)).replace('.', ',', 1)
+    btc_in_pools_eur = currency_format(str(round(result.btc_in_pools_eur,2)))
+
+    update.message.reply_text("Yesterdays Rewards:\n"
+                              + yesterdays_reward +
+                              " BTC = "
+                              + currency_format(yesterdays_reward_eur) +
+                              "€\n\n"
+                              "All time rewards:\n"
+                              + total_btc +
+                              " BTC = "
+                              + currency_format(total_btc_eur) +
+                              "€ \n\nAt current BTC price of: "
+                              + currency_format(str(btc_price)) +
+                              "€\n\n"
+                              "BTC pending in pools: "
+                              + btc_in_pools +
+                              " BTC = "
+                              + btc_in_pools_eur +
+                              "€\n\n"
+                              "BTC payed out to exchanges: "
+                              + btc_on_exchange +
+                              " BTC = "
+                              + btc_on_exchange_eur +
+                              "€")
+
+    save_rewards_plot(result.earnings)
+    chat_id = update.message.chat_id
+    document = open('rewards.png', 'rb')
+    context.bot.send_document(chat_id, document)
+
+def save_pools_plot(raw):
     df = pd.DataFrame(columns=['timestamp', 'antpool', 'slushpool', 'luxor'])
     raw['ratio'] = raw['daily_reward'] / raw['hashrate_in_phs']
     uniqueValues = raw['timestamp'].unique()
@@ -475,43 +108,139 @@ def plot_pools(raw):
     df_final['luxor'] = df_final['luxor'].rolling(3).mean()
     df_final['slushpool'] = df_final['slushpool'].rolling(3).mean()
     df_final['antpool'] = df_final['antpool'].rolling(3).mean()
-    df_final['hashrate'] = 0
 
     plt.xlabel("Days")
-    plt.ylabel("3d SMA BTC per PHS")
+    plt.ylabel("BTC per PHS 24h (3 day SMA)")
     plt.plot(df_final['timestamp'], df_final['luxor'], 'r', label='LUX')
     plt.plot(df_final['timestamp'], df_final['slushpool'], 'g', label='SLU')
     plt.plot(df_final['timestamp'], df_final['antpool'], 'y', label='ANT')
     plt.legend()
-    plt.show()
+    plt.savefig('pools.png')
+    plt.clf()
 
-def etl():
-    us_btc_price = get_current_data_USD()['USD']
-    eur_btc_price = get_current_data_EUR()['EUR']
-    earnings = get_total_earnings(us_btc_price, eur_btc_price)
-    raw = get_total_earnings_raw()
-    data = results(earnings, raw, us_btc_price, eur_btc_price)
+def save_rewards_plot(earnings):
+    earnings.drop(earnings.tail(1).index, inplace=True)
+    fig, ax1 = plt.subplots()
+    color = 'tab:red'
+    ax1.set_xlabel('days')
+    ax1.set_ylabel('reward 24h in btc', color=color)
+    ax1.plot(earnings['daily_reward'], color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('blockgems hashrate in ph', color=color)  # we already handled the x-label with ax1
+    ax2.plot(earnings['hashrate_in_phs'], color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.savefig('rewards.png')
+    plt.clf()
 
-    with open('data.pickle', 'wb') as io:
-        dill.dump(data, io)
+def currency_format(s):
+    s = s.replace('.', ',', 1)
+    length = s.find(',')
 
-    upload_file_to_azure('data.pickle')
-    return data
+    if length == 4:
+        s = s[:1] + '.' + s[1:]
+    elif length == 5:
+        s = s[:2] + '.' + s[2:]
+    elif length == 6:
+        s = s[:3] + '.' + s[3:]
+    elif length == 7:
+        s = s[:1] + '.' + s[1:]
+        s = s[:5] + '.' + s[5:]
+    elif length == 8:
+        s = s[:2] + '.' + s[2:]
+        s = s[:6] + '.' + s[6:]
+    elif length < 4 & length > 8:
+        s = s
 
-def load_from_cache():
-    get_file_from_azure('data.pickle')
-    with open('data.pickle', 'rb') as io:
-        data = dill.load(io)
-    return data
+    return s
 
-def get_data():
-    data = load_from_cache()
-    if (data.timestamp < datetime.datetime.now() - datetime.timedelta(minutes=15)):
-        return etl()
-    return data
+def hashrate(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
 
-def main():
-    data = get_data()
-    print(data.total_btc)
+    update.message.reply_markdown_v2(
+        fr'Under Construction ' + u'🚨',
+        reply_markup=ForceReply(selective=True),
+    )
 
-main()
+def total(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+
+    update.message.reply_markdown_v2(
+        fr'Under Construction ' + u'🚨',
+        reply_markup=ForceReply(selective=True),
+    )
+
+def status(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+
+    update.message.reply_markdown_v2(
+        fr'Under Construction ' + u'🚨',
+        reply_markup=ForceReply(selective=True),
+    )
+
+def pools(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+    result = Result().results()
+    save_pools_plot(result.raw)
+    chat_id = update.message.chat_id
+    document = open('pools.png', 'rb')
+    context.bot.send_document(chat_id, document)
+
+
+def uptime(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /start is issued."""
+
+    update.message.reply_markdown_v2(
+        fr'Under Construction ' + u'🚨',
+        reply_markup=ForceReply(selective=True),
+    )
+
+def help_command(update: Update, context: CallbackContext) -> None:
+    """Send a message when the command /help is issued."""
+    update.message.reply_text('/help\n\n'
+                              '/rewards\n\n'
+                              '/pools\n\n'
+                              '/status\n\n'
+                              )
+
+def echo(update: Update, context: CallbackContext) -> None:
+    """Echo the user message."""
+    update.message.reply_text(update.message.text)
+
+
+def main() -> None:
+    """Start the bot."""
+    # Create the Updater and pass it your bot's token.
+    with open("token.txt") as file:
+        token = file.read()
+
+    updater = Updater(token)
+
+    # Get the dispatcher to register handlers
+    dispatcher = updater.dispatcher
+
+    # on different commands - answer in Telegram
+    dispatcher.add_handler(CommandHandler("status", status))
+    dispatcher.add_handler(CommandHandler("hashrate", hashrate))
+    dispatcher.add_handler(CommandHandler("rewards", rewards))
+    dispatcher.add_handler(CommandHandler("total", total))
+    dispatcher.add_handler(CommandHandler("pools", pools))
+    dispatcher.add_handler(CommandHandler("uptime", uptime))
+    dispatcher.add_handler(CommandHandler("help", help_command))
+
+    # on non command i.e message - echo the message on Telegram
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+
+    # Start the Bot
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process receives SIGINT,
+    # SIGTERM or SIGABRT. This should be used most of the time, since
+    # start_polling() is non-blocking and will stop the bot gracefully.
+    updater.idle()
+
+
+if __name__ == '__main__':
+    main()
