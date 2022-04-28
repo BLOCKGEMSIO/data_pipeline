@@ -90,6 +90,15 @@ def key_in_json_old(key, json_old):
             return True;
     return False;
 
+def get_status_antpool():
+    api_sign = get_signature()
+    post_data = {'key': sign_key, 'nonce': api_sign[1], 'signature': api_sign[0], 'coin': coin_type, 'type': 'recv',
+                 'pageSize': 50}  # 这里是POST参数根据接口自行更改
+    request = requests.post('https://antpool.com/api/hashrate.htm', data=post_data)
+    json_object_response = json.loads(request.text)
+    json_object_data = json_object_response["data"]
+    return json_object_data
+
 def get_earnings_slushpool():
     get_file_from_azure('slushpool.json')
     url = "https://slushpool.com/stats/json/btc/"
@@ -509,3 +518,6 @@ def get_data():
     if (data.timestamp < datetime.datetime.now() - datetime.timedelta(minutes=15)):
         return etl()
     return data
+
+if __name__ == '__main__':
+    get_status_antpool()

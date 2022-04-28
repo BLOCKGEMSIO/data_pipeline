@@ -174,11 +174,9 @@ def total(update: Update, context: CallbackContext) -> None:
 
 def status(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
+    data = etl.get_status_antpool()
+    update.message.reply_text(data)
 
-    update.message.reply_markdown_v2(
-        fr'Under Construction ' + u'🚨',
-        reply_markup=ForceReply(selective=True),
-    )
 
 def pools(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
