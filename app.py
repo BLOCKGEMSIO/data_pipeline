@@ -44,7 +44,7 @@ def respond():
 
 @app.route('/setwebhook', methods=['GET', 'POST'])
 def set_webhook():
-    s = bot.setWebhook('{URL}{HOOK}'.format(URL="https://blockgems-telegram-bot.azurewebsites.net", HOOK=TOKEN))
+    s = bot.setWebhook('{URL}{HOOK}'.format(URL="https://blockgems-telegram-bot.azurewebsites.net/", HOOK=TOKEN))
     if s:
         return "webhook setup ok"
     else:
@@ -52,7 +52,7 @@ def set_webhook():
 
 @app.route('/')
 def index():
-    return '.'
+    return 'SCURR SCURR'
 
 
 if __name__ == '__main__':
