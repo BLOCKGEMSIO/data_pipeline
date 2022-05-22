@@ -1,5 +1,4 @@
 import pickle
-import time
 import hmac, hashlib
 import json
 import pandas as pd
@@ -9,6 +8,7 @@ import cryptocmd
 from requests.structures import CaseInsensitiveDict
 import datetime
 import matplotlib.pyplot as plt
+import time
 
 coin_type = 'BTC'  # 币种
 sign_id = 'BLOCKGEMS'  # 子账号名
@@ -520,4 +520,7 @@ def get_data():
     return data
 
 if __name__ == '__main__':
-    get_status_antpool()
+    starttime = time.time()
+    while True:
+        etl()
+        time.sleep(900.0 - ((time.time() - starttime) % 900.0))
