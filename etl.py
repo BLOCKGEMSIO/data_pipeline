@@ -100,40 +100,10 @@ def get_status_antpool():
     return json_object_data
 
 def get_earnings_slushpool():
-    get_file_from_azure('slushpool.json')
-    url = "https://slushpool.com/stats/json/btc/"
-    headers = CaseInsensitiveDict()
-    headers["SlushPool-Auth-Token"] = "IX5ZydZKgFqDjU5E"
-    resp = requests.get(url, headers=headers)
-    json_new = json.loads(resp.text)
+    get_file_from_azure('slushpool_new.json')
 
-    with open('slushpool.json') as json_file:
+    with open('slushpool_new.json') as json_file:
         json_old = json.load(json_file)
-
-    json_btc_new = json_new["btc"]
-    json_blocks_new = json_btc_new["blocks"]
-
-    for key, value in json_blocks_new.items():
-        if key_in_json_old(key,json_old):
-           continue;
-        else:
-            temp = json_blocks_new[key]
-            user_reward = temp["user_reward"]
-
-            if user_reward is None:
-                continue;
-
-            date = temp["date_found"]
-            date = datetime.datetime.fromtimestamp(date)
-            value = temp["value"]
-            pool_scoring_hash_rate = temp["pool_scoring_hash_rate"]
-            hashrate = ((float(user_reward) / float(value)) * pool_scoring_hash_rate) * 1.02
-
-            item = [int(key), str(date), str(value), float(pool_scoring_hash_rate), float(hashrate), str(user_reward)]
-            json_old.insert(len(json_old)-1, item)
-
-    with open('slushpool.json', 'w') as outfile:
-        json.dump(json_old, outfile)
 
     df = pd.read_csv('layout.csv', index_col=False)
     del json_old[0]
@@ -159,13 +129,13 @@ def get_earnings_slushpool():
 
     return df
 
-def get_earnings_luxor():
+def get_earnings_luxor_para():
     from luxor import API
 
     get_file_from_azure('luxor.csv')
 
     API = API(host='https://api.beta.luxor.tech/graphql', method='POST', org='luxor',
-              key='lxk.421a09f9f4586e75c71012b666ad97d3')
+                  key='lxk.421a09f9f4586e75c71012b666ad97d3')
     resp = API.get_hashrate_score_history("blockgems_paraguay", "BTC", 100)
     resp = json.dumps(resp)
     resp = json.loads(resp)
@@ -177,7 +147,7 @@ def get_earnings_luxor():
     for x in resp:
         hashrate = float(x["hashrate"]) / 1000000000000000
         reward = float(x["revenue"])
-        timestamp = x["date"].replace('T00:00:00+00:00',"")
+        timestamp = x["date"].replace('T00:00:00+00:00', "")
         temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
         df = df.append(temp, ignore_index=True)
 
@@ -188,10 +158,40 @@ def get_earnings_luxor():
 
     return df
 
+def get_earnings_luxor_nor():
+    from luxor import API
+
+    get_file_from_azure('luxor.csv')
+
+    API = API(host='https://api.beta.luxor.tech/graphql', method='POST', org='luxor',
+                  key='lxk.421a09f9f4586e75c71012b666ad97d3')
+    resp = API.get_hashrate_score_history("blockgems", "BTC", 100)
+    resp = json.dumps(resp)
+    resp = json.loads(resp)
+    resp = resp["data"]
+    resp = resp["getHashrateScoreHistory"]
+    resp = resp["nodes"]
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for x in resp:
+        hashrate = float(x["hashrate"]) / 1000000000000000
+        reward = float(x["revenue"])
+        timestamp = x["date"].replace('T00:00:00+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df.to_csv('luxor_nor.csv', index=False)
+    df = pd.read_csv('luxor_nor.csv', index_col=False)
+    upload_file_to_azure('luxor_nor.csv')
+
+    return df
+
 def get_total_earnings_raw():
     df_slush = get_earnings_slushpool()
     df_ant = get_earnings_antpool()
-    df_luxor = get_earnings_luxor()
+    df_luxor = get_earnings_luxor_para()
+    df_luxor_nor = get_earnings_luxor_nor()
 
     df_slush = df_slush.drop_duplicates()
     df_slush['hoster'] = 'acdc'
@@ -202,11 +202,15 @@ def get_total_earnings_raw():
     df_luxor = df_luxor.drop_duplicates()
     df_luxor['hoster'] = 'infinitia'
     df_luxor['pool'] = 'luxor'
+    df_luxor_nor = df_luxor_nor.drop_duplicates()
+    df_luxor_nor['hoster'] = 'ACDC'
+    df_luxor_nor['pool'] = 'luxor'
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
     df = df.append(df_ant)
     df = df.append(df_slush)
     df = df.append(df_luxor)
+    df = df.append(df_luxor_nor)
     df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
@@ -221,7 +225,8 @@ def get_total_earnings(usd_price, eur_price):
     get_total_earnings_raw()
     df = pd.read_csv('layout.csv', index_col=False)
     df_final = pd.read_csv('layout.csv', index_col=False)
-    df = df.append(get_earnings_luxor())
+    df = df.append(get_earnings_luxor_para())
+    df = df.append(get_earnings_luxor_nor())
     df = df.append(get_earnings_slushpool())
     df = df.append(get_earnings_antpool())
     df = df.drop_duplicates()
@@ -518,6 +523,7 @@ def get_data():
     if (data.timestamp < datetime.datetime.now() - datetime.timedelta(minutes=15)):
         return etl()
     return data
+
 
 if __name__ == '__main__':
     starttime = time.time()
