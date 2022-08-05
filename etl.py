@@ -526,7 +526,5 @@ def get_data():
 
 
 if __name__ == '__main__':
-    starttime = time.time()
-    while True:
-        etl()
-        time.sleep(900.0 - ((time.time() - starttime) % 900.0))
+    etl()
+
