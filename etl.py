@@ -203,7 +203,7 @@ def get_total_earnings_raw():
     df_luxor['hoster'] = 'infinitia'
     df_luxor['pool'] = 'luxor'
     df_luxor_nor = df_luxor_nor.drop_duplicates()
-    df_luxor_nor['hoster'] = 'ACDC'
+    df_luxor_nor['hoster'] = 'acdc'
     df_luxor_nor['pool'] = 'luxor'
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
