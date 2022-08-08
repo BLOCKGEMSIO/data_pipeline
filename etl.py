@@ -113,7 +113,6 @@ def get_earnings_slushpool():
 
     df.to_csv('slushpool.csv', index=False)
     df = pd.read_csv('slushpool.csv', index_col=False)
-    upload_file_to_azure('slushpool.json')
     upload_file_to_azure('slushpool.csv')
 
     return df
