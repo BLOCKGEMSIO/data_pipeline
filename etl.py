@@ -175,6 +175,37 @@ def get_earnings_luxor_nor():
 
     return df
 
+def daterange(date1, date2):
+    from datetime import timedelta
+    for n in range(int ((date2 - date1).days)+1):
+        yield date1 + timedelta(n)
+
+def insert_zeros(df):
+    from datetime import timedelta, date
+    df = df
+    hoster = df.loc[0]['hoster']
+    pool = df.loc[0]['pool']
+
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.date
+    oldest_date = df.timestamp.min()
+    todays_date = date.today().strftime('%Y-%m-%d')
+    from datetime import datetime
+    todays_date = datetime.strptime(todays_date, '%Y-%m-%d').date()
+    df_dates_till_today = []
+
+    for dt in daterange(oldest_date, todays_date):
+        df_dates_till_today.append(dt.strftime("%Y-%m-%d"))
+
+    df_av_dates = df['timestamp'].tolist()
+    df_av_dates = [date_obj.strftime('%Y-%m-%d') for date_obj in df_av_dates]
+    df_dates_missing = list(set(df_dates_till_today).difference(df_av_dates))
+
+    for x in df_dates_missing:
+        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool}
+        df = df.append(temp, ignore_index=True)
+
+    return df
+
 def get_total_earnings_raw():
     df_slush = get_earnings_slushpool()
     df_ant = get_earnings_antpool()
@@ -194,16 +225,20 @@ def get_total_earnings_raw():
     df_luxor_nor['hoster'] = 'acdc'
     df_luxor_nor['pool'] = 'luxor'
 
+    df_luxor = insert_zeros(df_luxor)
+    df_luxor_nor = insert_zeros(df_luxor_nor)
+    df_ant = insert_zeros(df_ant)
+    df_slush = insert_zeros(df_slush)
+
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
     df = df.append(df_ant)
     df = df.append(df_slush)
     df = df.append(df_luxor)
     df = df.append(df_luxor_nor)
-    df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
     df = df[df.timestamp != today]
-    df = df.drop('rewards_value_at_day_of_mining_usd', 1)
+
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
     return df
