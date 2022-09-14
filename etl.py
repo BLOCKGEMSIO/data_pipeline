@@ -57,9 +57,13 @@ def get_earnings_antpool():  # POST
             value = value.replace('PH/s', '')
             df.at[index, 'hashrate_in_phs'] = value
         elif value.find("TH/s") != -1:
-            value = value.replace('TH/s', '')
-            value = float(value)
-            value = value / 1000
+            value = 0.0
+            df.at[index, 'hashrate_in_phs'] = value
+        elif value.find("GH/s") != -1:
+            value = 0.0
+            df.at[index, 'hashrate_in_phs'] = value
+        elif value.find("H/s") != -1:
+            value = 0.0
             df.at[index, 'hashrate_in_phs'] = value
 
     df.to_csv('temp.csv', index=False)
@@ -242,7 +246,6 @@ def get_total_earnings_raw():
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
     return df
-
 
 def get_total_earnings(usd_price, eur_price):
     get_total_earnings_raw()
