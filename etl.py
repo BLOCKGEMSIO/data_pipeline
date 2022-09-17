@@ -239,10 +239,11 @@ def get_total_earnings_raw():
     df = df.append(df_slush)
     df = df.append(df_luxor)
     df = df.append(df_luxor_nor)
+    df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
     df = df[df.timestamp != today]
-
+    df = df.drop('rewards_value_at_day_of_mining_usd', 1)
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
     return df
@@ -340,9 +341,15 @@ def transpose(date):
     return datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
 def get_historic_price_usd(df):
+    print(df.info())
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    print(df.info())
     start_date = min(df['timestamp'])
     end_date = max(df['timestamp'])
-    price_data = get_price_for_date(transpose(start_date), transpose(end_date))
+    start_date = start_date.date().strftime("%d-%m-%Y")
+    end_date = end_date.date().strftime("%d-%m-%Y")
+
+    price_data = get_price_for_date(str(start_date), str(end_date))
     price_data = price_data.rename(columns={"Date": "timestamp"})
     price_data = price_data.rename(columns={"Open": "btc_day_open_price_usd"})
     price_data = price_data.rename(columns={"High": "btc_day_high_price_usd"})
@@ -350,6 +357,7 @@ def get_historic_price_usd(df):
     price_data = price_data.rename(columns={"Close": "btc_day_close_price_usd"})
     price_data.drop(['Volume', 'Market Cap'], axis=1, inplace=True)
     price_data['timestamp'] = price_data['timestamp'].dt.strftime('%Y-%m-%d')
+    price_data['timestamp'] = pd.to_datetime(price_data['timestamp'])
     df = pd.merge(df, price_data, how='left')
     df['rewards_value_at_day_of_mining_usd'] = df['daily_reward'] * df['btc_day_close_price_usd']
 
