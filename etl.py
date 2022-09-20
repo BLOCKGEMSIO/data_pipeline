@@ -179,6 +179,35 @@ def get_earnings_luxor_nor():
 
     return df
 
+def get_foundry_penguintests19j():
+
+    #get_file_from_azure('penguintests19j.csv')
+
+    url = "https://api.foundryusapool.com/earnings/penguintests19j?startDateUnixMs=1663192800000"
+
+    payload = {}
+    headers = {
+        'X-API-KEY': '390cac7d-4fc4-4f38-a539-6f5fd7da1b96'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = pd.DataFrame(json.loads(resp.text))
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        hashrate = float(x["hashrate"]) / 1000000
+        reward = float(x["ppsBaseAmount"] + x["txFeeRewardAmount"])
+        timestamp = x["startTime"].replace('T00:00:00.000+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df.to_csv('penguintests19j.csv', index=False)
+    df = pd.read_csv('penguintests19j.csv', index_col=False)
+    upload_file_to_azure('penguintests19j.csv')
+
+    return df
+
 def daterange(date1, date2):
     from datetime import timedelta
     for n in range(int ((date2 - date1).days)+1):
@@ -215,6 +244,7 @@ def get_total_earnings_raw():
     df_ant = get_earnings_antpool()
     df_luxor = get_earnings_luxor_para()
     df_luxor_nor = get_earnings_luxor_nor()
+    df_penguintests19j = get_foundry_penguintests19j()
 
     df_slush = df_slush.drop_duplicates()
     df_slush['hoster'] = 'acdc'
@@ -228,17 +258,22 @@ def get_total_earnings_raw():
     df_luxor_nor = df_luxor_nor.drop_duplicates()
     df_luxor_nor['hoster'] = 'acdc'
     df_luxor_nor['pool'] = 'luxor'
+    df_penguintests19j = df_penguintests19j.drop_duplicates()
+    df_penguintests19j['hoster'] = 'penguin'
+    df_penguintests19j['pool'] = 'foundry'
 
     df_luxor = insert_zeros(df_luxor)
     df_luxor_nor = insert_zeros(df_luxor_nor)
     df_ant = insert_zeros(df_ant)
     df_slush = insert_zeros(df_slush)
+    df_penguintests19j = insert_zeros(df_penguintests19j)
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
     df = df.append(df_ant)
     df = df.append(df_slush)
     df = df.append(df_luxor)
     df = df.append(df_luxor_nor)
+    df = df.append(df_penguintests19j)
     df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
@@ -247,46 +282,6 @@ def get_total_earnings_raw():
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
     return df
-
-def get_total_earnings(usd_price, eur_price):
-    get_total_earnings_raw()
-    df = pd.read_csv('layout.csv', index_col=False)
-    df_final = pd.read_csv('layout.csv', index_col=False)
-    df = df.append(get_earnings_luxor_para())
-    df = df.append(get_earnings_luxor_nor())
-    df = df.append(get_earnings_slushpool())
-    df = df.append(get_earnings_antpool())
-    df = df.drop_duplicates()
-    uniqueValues = df['timestamp'].unique()
-
-    for x in uniqueValues:
-        temp = df.query('timestamp == "' + x + '"')
-        daily_rewards = temp.loc[:, 'daily_reward'].sum()
-        daily_hash_rate = temp['hashrate_in_phs'].sum()
-        btc_per_ph = daily_rewards / daily_hash_rate
-        df_temp = {'timestamp': x, 'hashrate_in_phs': daily_hash_rate, 'daily_reward': float(daily_rewards), '24h_btc_per_ph': float(btc_per_ph)}
-        df_final = df_final.append(df_temp, ignore_index=True)
-
-    df_final = df_final.drop_duplicates().sort_values(by = 'timestamp')
-    df_final = transform_to_cummulated(df_final)
-    df_final = add_prices(df_final, usd_price, eur_price)
-    df_final = df_final.round(5)
-    df_final = get_historic_price_usd(df_final)
-    df_final['daily_reward_cum_eur'] = df_final['daily_reward_cum_eur'].round(2)
-    df_final['daily_reward_cum_us'] = df_final['daily_reward_cum_us'].round(2)
-    df_final['hashrate_in_phs'] = df_final['hashrate_in_phs'].round(2)
-    df_final['rewards_value_at_day_of_mining_usd'] = df_final['rewards_value_at_day_of_mining_usd'].round(2)
-    df_final['btc_day_close_price_usd'] = df_final['btc_day_close_price_usd'].round(2)
-    df_final['btc_day_low_price_usd'] = df_final['btc_day_low_price_usd'].round(2)
-    df_final['btc_day_high_price_usd'] = df_final['btc_day_high_price_usd'].round(2)
-    df_final['btc_day_open_price_usd'] = df_final['btc_day_open_price_usd'].round(2)
-    df_final['daily_reward_eur'] = df_final['daily_reward_eur'].round(2)
-    df_final['daily_reward_us'] = df_final['daily_reward_us'].round(2)
-    df_final.to_csv('total.csv', index=False)
-    df_final = pd.read_csv('total.csv', index_col=False)
-    upload_file_to_azure('total.csv')
-    return df_final
-
 
 def get_current_data_USD(from_sym='BTC', to_sym='USD', exchange=''):
     url = 'https://min-api.cryptocompare.com/data/price'
