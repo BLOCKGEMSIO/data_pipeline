@@ -270,6 +270,7 @@ def get_total_earnings_raw():
     df_luxor = get_earnings_luxor_para()
     df_luxor_nor = get_earnings_luxor_nor()
     df_penguintests19j = get_foundry_penguintests19j()
+    df_eunorths19j = get_foundry_eunorths19j()
 
     df_slush = df_slush.drop_duplicates()
     df_slush['hoster'] = 'acdc'
@@ -286,12 +287,16 @@ def get_total_earnings_raw():
     df_penguintests19j = df_penguintests19j.drop_duplicates()
     df_penguintests19j['hoster'] = 'penguin'
     df_penguintests19j['pool'] = 'foundry'
+    df_eunorths19j = df_eunorths19j.drop_duplicates()
+    df_eunorths19j['hoster'] = 'acdc'
+    df_eunorths19j['pool'] = 'foundry'
 
     df_luxor = insert_zeros(df_luxor)
     df_luxor_nor = insert_zeros(df_luxor_nor)
     df_ant = insert_zeros(df_ant)
     df_slush = insert_zeros(df_slush)
     df_penguintests19j = insert_zeros(df_penguintests19j)
+    df_eunorths19j = insert_zeros(df_eunorths19j)
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
     df = df.append(df_ant)
@@ -299,6 +304,7 @@ def get_total_earnings_raw():
     df = df.append(df_luxor)
     df = df.append(df_luxor_nor)
     df = df.append(df_penguintests19j)
+    df = df.append(df_eunorths19j)
     df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
