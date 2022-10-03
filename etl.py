@@ -71,6 +71,11 @@ def get_earnings_antpool():  # POST
     df = pd.read_csv('temp.csv', index_col=False)
     df = df.append(df_old)
     df = df.drop_duplicates()
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df['hoster'] = 'rosenenergoatom'
+    df['pool'] = 'antpool'
+    df = insert_zeros(df)
     df.to_csv('antpool.csv', index=False)
     df = pd.read_csv('antpool.csv', index_col=False)
     upload_file_to_azure('antpool.csv')
@@ -115,6 +120,12 @@ def get_earnings_slushpool():
         df_temp = {'timestamp': x, 'hashrate_in_phs': daily_hash_rate / 1000000, 'daily_reward': float(daily_rewards)}
         df = df.append(df_temp, ignore_index=True)
 
+    df = df.drop_duplicates()
+    df['hoster'] = 'acdc'
+    df['pool'] = 'slushpool'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
     df.to_csv('slushpool.csv', index=False)
     df = pd.read_csv('slushpool.csv', index_col=False)
     upload_file_to_azure('slushpool.csv')
@@ -144,6 +155,11 @@ def get_earnings_luxor_para():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
+    df['hoster'] = 'infinitia'
+    df['pool'] = 'luxor'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
     df.to_csv('luxor.csv', index=False)
     df = pd.read_csv('luxor.csv', index_col=False)
     upload_file_to_azure('luxor.csv')
@@ -173,6 +189,11 @@ def get_earnings_luxor_nor():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
+    df['hoster'] = 'acdc'
+    df['pool'] = 'luxor'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
     df.to_csv('luxor_nor.csv', index=False)
     df = pd.read_csv('luxor_nor.csv', index_col=False)
     upload_file_to_azure('luxor_nor.csv')
@@ -200,6 +221,11 @@ def get_foundry_penguintests19j():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
+    df['hoster'] = 'penguin'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
     df.to_csv('penguintests19j.csv', index=False)
     df = pd.read_csv('penguintests19j.csv', index_col=False)
     upload_file_to_azure('penguintests19j.csv')
@@ -227,6 +253,11 @@ def get_foundry_eunorths19j():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
+    df['hoster'] = 'acdc'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
     df.to_csv('eunorths19j.csv', index=False)
     df = pd.read_csv('eunorths19j.csv', index_col=False)
     upload_file_to_azure('eunorths19j.csv')
@@ -235,11 +266,11 @@ def get_foundry_eunorths19j():
 
 def get_foundry_eunorths19xp():
 
-    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+    url = "https://api.foundryusapool.com/earnings/eunorths19xp?startDateUnixMs=1663192800000"
 
     payload = {}
     headers = {
-        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+        'X-API-KEY': 'c8df236b-478e-4a83-ba4f-c442a5cc3ed4'
     }
 
     resp = requests.request("GET", url, headers=headers, data=payload)
@@ -254,19 +285,24 @@ def get_foundry_eunorths19xp():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
-    df.to_csv('eunorths19j.csv', index=False)
-    df = pd.read_csv('eunorths19j.csv', index_col=False)
-    upload_file_to_azure('eunorths19j.csv')
+    df['hoster'] = 'acdc'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19XP'
+    df['miner_hashrate'] = 140
+    df = insert_zeros(df)
+    df.to_csv('eunorths19xp.csv', index=False)
+    df = pd.read_csv('eunorths19xp.csv', index_col=False)
+    upload_file_to_azure('eunorths19xp.csv')
 
     return df
 
 def get_foundry_eueasts19j():
 
-    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+    url = "https://api.foundryusapool.com/earnings/eueasts19j?startDateUnixMs=1663192800000"
 
     payload = {}
     headers = {
-        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+        'X-API-KEY': 'efac6b55-2c8e-472e-be71-5e81d28d8d3f'
     }
 
     resp = requests.request("GET", url, headers=headers, data=payload)
@@ -281,19 +317,24 @@ def get_foundry_eueasts19j():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
-    df.to_csv('eunorths19j.csv', index=False)
-    df = pd.read_csv('eunorths19j.csv', index_col=False)
-    upload_file_to_azure('eunorths19j.csv')
+    df['hoster'] = 'rosenenergoatom'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19J'
+    df['miner_hashrate'] = 100
+    df = insert_zeros(df)
+    df.to_csv('eueasts19j.csv', index=False)
+    df = pd.read_csv('eueasts19j.csv', index_col=False)
+    upload_file_to_azure('eueasts19j.csv')
 
     return df
 
 def get_foundry_eueasts19xp():
 
-    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+    url = "https://api.foundryusapool.com/earnings/eueasts19xp?startDateUnixMs=1663192800000"
 
     payload = {}
     headers = {
-        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+        'X-API-KEY': '523741f1-1118-439a-8f7f-d45f71389739'
     }
 
     resp = requests.request("GET", url, headers=headers, data=payload)
@@ -308,9 +349,14 @@ def get_foundry_eueasts19xp():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
-    df.to_csv('eunorths19j.csv', index=False)
-    df = pd.read_csv('eunorths19j.csv', index_col=False)
-    upload_file_to_azure('eunorths19j.csv')
+    df['hoster'] = 'rosenenergoatom'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19XP'
+    df['miner_hashrate'] = 140
+    df = insert_zeros(df)
+    df.to_csv('eueasts19xp.csv', index=False)
+    df = pd.read_csv('eueasts19xp.csv', index_col=False)
+    upload_file_to_azure('eueasts19xp.csv')
 
     return df
 
@@ -324,6 +370,8 @@ def insert_zeros(df):
     df = df
     hoster = df.loc[0]['hoster']
     pool = df.loc[0]['pool']
+    miner_hashrate = df.loc[0]['miner_hashrate']
+    miner = df.loc[0]['miner']
 
     df['timestamp'] = pd.to_datetime(df['timestamp']).dt.date
     oldest_date = df.timestamp.min()
@@ -340,7 +388,7 @@ def insert_zeros(df):
     df_dates_missing = list(set(df_dates_till_today).difference(df_av_dates))
 
     for x in df_dates_missing:
-        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool}
+        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool, 'miner': miner, 'miner_hashrate': miner_hashrate}
         df = df.append(temp, ignore_index=True)
 
     return df
@@ -352,32 +400,10 @@ def get_total_earnings_raw():
     df_luxor_nor = get_earnings_luxor_nor()
     df_penguintests19j = get_foundry_penguintests19j()
     df_eunorths19j = get_foundry_eunorths19j()
+    df_eunorths19xp = get_foundry_eunorths19xp()
+    df_eueasts19j = get_foundry_eueasts19j()
+    df_eueasts19xp = get_foundry_eueasts19xp()
 
-    df_slush = df_slush.drop_duplicates()
-    df_slush['hoster'] = 'acdc'
-    df_slush['pool'] = 'slushpool'
-    df_ant = df_ant.drop_duplicates()
-    df_ant['hoster'] = 'rosenenergoatom'
-    df_ant['pool'] = 'antpool'
-    df_luxor = df_luxor.drop_duplicates()
-    df_luxor['hoster'] = 'infinitia'
-    df_luxor['pool'] = 'luxor'
-    df_luxor_nor = df_luxor_nor.drop_duplicates()
-    df_luxor_nor['hoster'] = 'acdc'
-    df_luxor_nor['pool'] = 'luxor'
-    df_penguintests19j = df_penguintests19j.drop_duplicates()
-    df_penguintests19j['hoster'] = 'penguin'
-    df_penguintests19j['pool'] = 'foundry'
-    df_eunorths19j = df_eunorths19j.drop_duplicates()
-    df_eunorths19j['hoster'] = 'acdc'
-    df_eunorths19j['pool'] = 'foundry'
-
-    df_luxor = insert_zeros(df_luxor)
-    df_luxor_nor = insert_zeros(df_luxor_nor)
-    df_ant = insert_zeros(df_ant)
-    df_slush = insert_zeros(df_slush)
-    df_penguintests19j = insert_zeros(df_penguintests19j)
-    df_eunorths19j = insert_zeros(df_eunorths19j)
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
     df = df.append(df_ant)
@@ -386,6 +412,9 @@ def get_total_earnings_raw():
     df = df.append(df_luxor_nor)
     df = df.append(df_penguintests19j)
     df = df.append(df_eunorths19j)
+    df = df.append(df_eunorths19xp)
+    df = df.append(df_eueasts19j)
+    df = df.append(df_eueasts19xp)
     df = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
