@@ -233,6 +233,87 @@ def get_foundry_eunorths19j():
 
     return df
 
+def get_foundry_eunorths19xp():
+
+    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+
+    payload = {}
+    headers = {
+        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = pd.DataFrame(json.loads(resp.text))
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        hashrate = float(x["hashrate"]) / 1000000
+        reward = float(x["ppsBaseAmount"] + x["txFeeRewardAmount"])
+        timestamp = x["startTime"].replace('T00:00:00.000+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df.to_csv('eunorths19j.csv', index=False)
+    df = pd.read_csv('eunorths19j.csv', index_col=False)
+    upload_file_to_azure('eunorths19j.csv')
+
+    return df
+
+def get_foundry_eueasts19j():
+
+    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+
+    payload = {}
+    headers = {
+        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = pd.DataFrame(json.loads(resp.text))
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        hashrate = float(x["hashrate"]) / 1000000
+        reward = float(x["ppsBaseAmount"] + x["txFeeRewardAmount"])
+        timestamp = x["startTime"].replace('T00:00:00.000+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df.to_csv('eunorths19j.csv', index=False)
+    df = pd.read_csv('eunorths19j.csv', index_col=False)
+    upload_file_to_azure('eunorths19j.csv')
+
+    return df
+
+def get_foundry_eueasts19xp():
+
+    url = "https://api.foundryusapool.com/earnings/eunorths19j?startDateUnixMs=1663192800000"
+
+    payload = {}
+    headers = {
+        'X-API-KEY': '8a44d8fd-b080-4bed-af38-7a22579a8226'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = pd.DataFrame(json.loads(resp.text))
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        hashrate = float(x["hashrate"]) / 1000000
+        reward = float(x["ppsBaseAmount"] + x["txFeeRewardAmount"])
+        timestamp = x["startTime"].replace('T00:00:00.000+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df.to_csv('eunorths19j.csv', index=False)
+    df = pd.read_csv('eunorths19j.csv', index_col=False)
+    upload_file_to_azure('eunorths19j.csv')
+
+    return df
+
 def daterange(date1, date2):
     from datetime import timedelta
     for n in range(int ((date2 - date1).days)+1):
