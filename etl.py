@@ -125,7 +125,6 @@ def get_earnings_slushpool():
     df['pool'] = 'slushpool'
     df['miner'] = 'S19J'
     df['miner_hashrate'] = 100
-    #df = insert_zeros(df)
     df.to_csv('slushpool.csv', index=False)
     df = pd.read_csv('slushpool.csv', index_col=False)
     upload_file_to_azure('slushpool.csv')
