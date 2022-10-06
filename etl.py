@@ -125,7 +125,7 @@ def get_earnings_slushpool():
     df['pool'] = 'slushpool'
     df['miner'] = 'S19J'
     df['miner_hashrate'] = 100
-    df = insert_zeros(df)
+    #df = insert_zeros(df)
     df.to_csv('slushpool.csv', index=False)
     df = pd.read_csv('slushpool.csv', index_col=False)
     upload_file_to_azure('slushpool.csv')
@@ -415,13 +415,17 @@ def get_total_earnings_raw():
     df = df.append(df_eunorths19xp)
     df = df.append(df_eueasts19j)
     df = df.append(df_eueasts19xp)
-    df = get_historic_price_usd(df)
+    btc_prices = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
     df = df[df.timestamp != today]
-    df = df.drop('rewards_value_at_day_of_mining_usd', 1)
+    btc_prices = btc_prices[btc_prices.timestamp != today]
     df.to_csv('total_raw.csv', index=False)
     upload_file_to_azure("total_raw.csv")
+
+    btc_prices.to_csv('btc_prices.csv', index=False)
+    upload_file_to_azure("btc_prices.csv")
+
     return df
 
 def get_current_data_USD(from_sym='BTC', to_sym='USD', exchange=''):
@@ -495,7 +499,14 @@ def get_historic_price_usd(df):
     price_data['timestamp'] = price_data['timestamp'].dt.strftime('%Y-%m-%d')
     price_data['timestamp'] = pd.to_datetime(price_data['timestamp'])
     df = pd.merge(df, price_data, how='left')
-    df['rewards_value_at_day_of_mining_usd'] = df['daily_reward'] * df['btc_day_close_price_usd']
+
+    df.drop('hashrate_in_phs', axis=1, inplace=True)
+    df.drop('daily_reward', axis=1, inplace=True)
+    df.drop('hoster', axis=1, inplace=True)
+    df.drop('pool', axis=1, inplace=True)
+    df.drop('miner', axis=1, inplace=True)
+    df.drop('miner_hashrate', axis=1, inplace=True)
+    df = df.drop_duplicates()
 
     return df
 
