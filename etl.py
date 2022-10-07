@@ -37,49 +37,16 @@ def get_signature():  # 签名操作
 
 def get_earnings_antpool():  # POST
     get_file_from_azure("antpool.csv")
-    api_sign = get_signature()
-    post_data = {'key': sign_key, 'nonce': api_sign[1], 'signature': api_sign[0], 'coin': coin_type, 'type': 'recv',
-                 'pageSize': 50}  # 这里是POST参数根据接口自行更改
-    request = requests.post(html_payment, data=post_data)
-    json_object_response = json.loads(request.text)
-    json_object_data = json_object_response["data"]
-    json_object_rows = json_object_data["rows"]
-    df = pd.read_json(json.dumps(json_object_rows))
-    df = df.drop(
-        columns=['fppsFeeAmount', 'fppsBlockAmount', 'ppappsAmount', 'ppapplnsAmount', 'soloAmount', 'ppsAmount',
-                 'hashrate_unit'])
-    df = df.rename(columns={"hashrate": "hashrate_in_phs", "pplnsAmount": "daily_reward"})
-
-    for index, row in df.iterrows():
-        value = str(row['hashrate_in_phs'])
-
-        if value.find("PH/s") != -1:
-            value = value.replace('PH/s', '')
-            df.at[index, 'hashrate_in_phs'] = value
-        elif value.find("TH/s") != -1:
-            value = 0.0
-            df.at[index, 'hashrate_in_phs'] = value
-        elif value.find("GH/s") != -1:
-            value = 0.0
-            df.at[index, 'hashrate_in_phs'] = value
-        elif value.find("H/s") != -1:
-            value = 0.0
-            df.at[index, 'hashrate_in_phs'] = value
-
-    df.to_csv('temp.csv', index=False)
-    df_old = pd.read_csv('antpool.csv', index_col=False)
-    df = pd.read_csv('temp.csv', index_col=False)
-    df = df.append(df_old)
+    df = pd.read_csv('antpool.csv', index_col=False)
     df = df.drop_duplicates()
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'antpool'
-    df = insert_zeros(df)
     df.to_csv('antpool.csv', index=False)
     df = pd.read_csv('antpool.csv', index_col=False)
     upload_file_to_azure('antpool.csv')
-    return (df)
+    df.sort_values(by='timestamp', inplace=True)
+    return df
 
 
 def key_in_json_old(key, json_old):
@@ -124,7 +91,6 @@ def get_earnings_slushpool():
     df['hoster'] = 'acdc'
     df['pool'] = 'slushpool'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df.to_csv('slushpool.csv', index=False)
     df = pd.read_csv('slushpool.csv', index_col=False)
     upload_file_to_azure('slushpool.csv')
@@ -157,7 +123,6 @@ def get_earnings_luxor_para():
     df['hoster'] = 'infinitia'
     df['pool'] = 'luxor'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df = insert_zeros(df)
     df.to_csv('luxor.csv', index=False)
     df = pd.read_csv('luxor.csv', index_col=False)
@@ -191,7 +156,6 @@ def get_earnings_luxor_nor():
     df['hoster'] = 'acdc'
     df['pool'] = 'luxor'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df = insert_zeros(df)
     df.to_csv('luxor_nor.csv', index=False)
     df = pd.read_csv('luxor_nor.csv', index_col=False)
@@ -223,7 +187,6 @@ def get_foundry_penguintests19j():
     df['hoster'] = 'penguin'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df = insert_zeros(df)
     df.to_csv('penguintests19j.csv', index=False)
     df = pd.read_csv('penguintests19j.csv', index_col=False)
@@ -255,7 +218,6 @@ def get_foundry_eunorths19j():
     df['hoster'] = 'acdc'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df = insert_zeros(df)
     df.to_csv('eunorths19j.csv', index=False)
     df = pd.read_csv('eunorths19j.csv', index_col=False)
@@ -287,7 +249,6 @@ def get_foundry_eunorths19xp():
     df['hoster'] = 'acdc'
     df['pool'] = 'foundry'
     df['miner'] = 'S19XP'
-    df['miner_hashrate'] = 140
     df = insert_zeros(df)
     df.to_csv('eunorths19xp.csv', index=False)
     df = pd.read_csv('eunorths19xp.csv', index_col=False)
@@ -319,7 +280,6 @@ def get_foundry_eueasts19j():
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df['miner_hashrate'] = 100
     df = insert_zeros(df)
     df.to_csv('eueasts19j.csv', index=False)
     df = pd.read_csv('eueasts19j.csv', index_col=False)
@@ -351,7 +311,6 @@ def get_foundry_eueasts19xp():
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'foundry'
     df['miner'] = 'S19XP'
-    df['miner_hashrate'] = 140
     df = insert_zeros(df)
     df.to_csv('eueasts19xp.csv', index=False)
     df = pd.read_csv('eueasts19xp.csv', index_col=False)
@@ -369,7 +328,6 @@ def insert_zeros(df):
     df = df
     hoster = df.loc[0]['hoster']
     pool = df.loc[0]['pool']
-    miner_hashrate = df.loc[0]['miner_hashrate']
     miner = df.loc[0]['miner']
 
     df['timestamp'] = pd.to_datetime(df['timestamp']).dt.date
@@ -387,7 +345,7 @@ def insert_zeros(df):
     df_dates_missing = list(set(df_dates_till_today).difference(df_av_dates))
 
     for x in df_dates_missing:
-        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool, 'miner': miner, 'miner_hashrate': miner_hashrate}
+        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool, 'miner': miner}
         df = df.append(temp, ignore_index=True)
 
     return df
@@ -504,7 +462,6 @@ def get_historic_price_usd(df):
     df.drop('hoster', axis=1, inplace=True)
     df.drop('pool', axis=1, inplace=True)
     df.drop('miner', axis=1, inplace=True)
-    df.drop('miner_hashrate', axis=1, inplace=True)
     df = df.drop_duplicates()
 
     return df
