@@ -38,7 +38,7 @@ def get_signature():  # 签名操作
 def get_earnings_antpool():  # POST
     get_file_from_azure("antpool.csv")
     df = pd.read_csv('antpool.csv', index_col=False)
-    df = df.drop_duplicates()
+    df = df.drop_duplicates(subset=['timestamp'])
     df['miner'] = 'S19J'
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'antpool'
