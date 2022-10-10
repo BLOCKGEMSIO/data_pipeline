@@ -101,6 +101,7 @@ def get_earnings_luxor_para():
     from luxor import API
 
     get_file_from_azure('luxor.csv')
+    get_file_from_azure('temp_luxor.csv')
 
     API = API(host='https://api.beta.luxor.tech/graphql', method='POST', org='luxor',
                   key='lxk.421a09f9f4586e75c71012b666ad97d3')
@@ -119,11 +120,16 @@ def get_earnings_luxor_para():
         temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
         df = df.append(temp, ignore_index=True)
 
+    #temp
+    df_old = pd.read_csv('luxor.csv', index_col=False)
+    df_old.drop(['hoster', 'pool', 'miner'], axis=1, inplace=True)
+    df = df.append(df_old)
+
     df = df.drop_duplicates()
     df['hoster'] = 'infinitia'
     df['pool'] = 'luxor'
     df['miner'] = 'S19J'
-    df = insert_zeros(df)
+    df = insert_zeros(df, 'infinitia', 'luxor', 'S19J')
     df.to_csv('luxor.csv', index=False)
     df = pd.read_csv('luxor.csv', index_col=False)
     upload_file_to_azure('luxor.csv')
@@ -131,35 +137,8 @@ def get_earnings_luxor_para():
     return df
 
 def get_earnings_luxor_nor():
-    from luxor import API
-
-    get_file_from_azure('luxor.csv')
-
-    API = API(host='https://api.beta.luxor.tech/graphql', method='POST', org='luxor',
-                  key='lxk.421a09f9f4586e75c71012b666ad97d3')
-    resp = API.get_hashrate_score_history("blockgems", "BTC", 100)
-    resp = json.dumps(resp)
-    resp = json.loads(resp)
-    resp = resp["data"]
-    resp = resp["getHashrateScoreHistory"]
-    resp = resp["nodes"]
-    df = pd.read_csv('layout.csv', index_col=False)
-
-    for x in resp:
-        hashrate = float(x["hashrate"]) / 1000000000000000
-        reward = float(x["revenue"])
-        timestamp = x["date"].replace('T00:00:00+00:00', "")
-        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
-        df = df.append(temp, ignore_index=True)
-
-    df = df.drop_duplicates()
-    df['hoster'] = 'acdc'
-    df['pool'] = 'luxor'
-    df['miner'] = 'S19J'
-    df = insert_zeros(df)
-    df.to_csv('luxor_nor.csv', index=False)
+    get_file_from_azure('luxor_nor.csv')
     df = pd.read_csv('luxor_nor.csv', index_col=False)
-    upload_file_to_azure('luxor_nor.csv')
 
     return df
 
@@ -187,7 +166,7 @@ def get_foundry_penguintests19j():
     df['hoster'] = 'penguin'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df = insert_zeros(df)
+    df = insert_zeros(df, "penguin", "foundry", "S19J")
     df.to_csv('penguintests19j.csv', index=False)
     df = pd.read_csv('penguintests19j.csv', index_col=False)
     upload_file_to_azure('penguintests19j.csv')
@@ -218,7 +197,7 @@ def get_foundry_eunorths19j():
     df['hoster'] = 'acdc'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df = insert_zeros(df)
+    df = insert_zeros(df, "acdc", "foundry", "S19J")
     df.to_csv('eunorths19j.csv', index=False)
     df = pd.read_csv('eunorths19j.csv', index_col=False)
     upload_file_to_azure('eunorths19j.csv')
@@ -249,10 +228,41 @@ def get_foundry_eunorths19xp():
     df['hoster'] = 'acdc'
     df['pool'] = 'foundry'
     df['miner'] = 'S19XP'
-    df = insert_zeros(df)
+    df = insert_zeros(df, "acdc", "foundry", "S19XP")
     df.to_csv('eunorths19xp.csv', index=False)
     df = pd.read_csv('eunorths19xp.csv', index_col=False)
     upload_file_to_azure('eunorths19xp.csv')
+
+    return df
+
+def get_foundry_eusouths19j():
+
+    url = "https://api.foundryusapool.com/earnings/eusouths19j?startDateUnixMs=1663192800000"
+
+    payload = {}
+    headers = {
+        'X-API-KEY': 'f3b4af00-71ab-49ff-8653-d43b5ac7f9a5'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = pd.DataFrame(json.loads(resp.text))
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        hashrate = float(x["hashrate"]) / 1000000
+        reward = float(x["ppsBaseAmount"] + x["txFeeRewardAmount"])
+        timestamp = x["startTime"].replace('T00:00:00.000+00:00', "")
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df['hoster'] = 'eidetic'
+    df['pool'] = 'foundry'
+    df['miner'] = 'S19J'
+    df = insert_zeros(df, "eidetic", "foundry", "S19J")
+    df.to_csv('eusouths19j.csv', index=False)
+    df = pd.read_csv('eusouths19j.csv', index_col=False)
+    upload_file_to_azure('eusouths19j.csv')
 
     return df
 
@@ -280,7 +290,7 @@ def get_foundry_eueasts19j():
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'foundry'
     df['miner'] = 'S19J'
-    df = insert_zeros(df)
+    df = insert_zeros(df, "rosenenergoatom", "foundry", "S19J")
     df.to_csv('eueasts19j.csv', index=False)
     df = pd.read_csv('eueasts19j.csv', index_col=False)
     upload_file_to_azure('eueasts19j.csv')
@@ -311,7 +321,7 @@ def get_foundry_eueasts19xp():
     df['hoster'] = 'rosenenergoatom'
     df['pool'] = 'foundry'
     df['miner'] = 'S19XP'
-    df = insert_zeros(df)
+    df = insert_zeros(df, "rosenenergoatom", "foundry", "S19XP")
     df.to_csv('eueasts19xp.csv', index=False)
     df = pd.read_csv('eueasts19xp.csv', index_col=False)
     upload_file_to_azure('eueasts19xp.csv')
@@ -323,12 +333,9 @@ def daterange(date1, date2):
     for n in range(int ((date2 - date1).days)+1):
         yield date1 + timedelta(n)
 
-def insert_zeros(df):
+def insert_zeros(df, hoster, pool, miner):
     from datetime import timedelta, date
     df = df
-    hoster = df.loc[0]['hoster']
-    pool = df.loc[0]['pool']
-    miner = df.loc[0]['miner']
 
     df['timestamp'] = pd.to_datetime(df['timestamp']).dt.date
     oldest_date = df.timestamp.min()
@@ -345,7 +352,7 @@ def insert_zeros(df):
     df_dates_missing = list(set(df_dates_till_today).difference(df_av_dates))
 
     for x in df_dates_missing:
-        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': hoster, 'pool': pool, 'miner': miner}
+        temp = {'timestamp': x, 'hashrate_in_phs': float(0.0), 'daily_reward': float(0.0), 'hoster': str(hoster), 'pool': str(pool), 'miner': str(miner)}
         df = df.append(temp, ignore_index=True)
 
     return df
