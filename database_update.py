@@ -6,23 +6,6 @@ database = 'BTC_MINING_DATA'
 username = 'blockgems'
 password = 'AXE16dry'
 
-def get_file_from_azure(s):
-    from azure.storage.blob import BlobServiceClient
-
-    STORAGEACCOUNTURL = "https://blockgems.blob.core.windows.net"
-    STORAGEACCOUNTKEY = "s/pN8kuq//BqbT+pMysvLjeguuhw/UFvW+mHlhpR2gGykMFgI8GpfPDa70K2icBlCI6RDakck7GSO0g3aW1WwA=="
-    CONTAINERNAME = "blockgems"
-
-    blob_service_client_instance = BlobServiceClient(
-        account_url=STORAGEACCOUNTURL, credential=STORAGEACCOUNTKEY)
-
-    blob_client_instance = blob_service_client_instance.get_blob_client(
-        CONTAINERNAME, s, snapshot=None)
-
-    with open(s, "wb") as my_blob:
-        download_stream = blob_client_instance.download_blob()
-        my_blob.write(download_stream.readall())
-
 def insert_row(timestamp, hashrate_in_phs, daily_reward, hoster, pool, miner):
     cnxn = pyodbc.connect(
         'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
@@ -32,7 +15,7 @@ def insert_row(timestamp, hashrate_in_phs, daily_reward, hoster, pool, miner):
     cnxn.commit()
 
 def import_data_from_csv():
-    get_file_from_azure("total_raw.csv")
+    etl.get_file_from_azure("total_raw.csv")
     df = pd.read_csv('total_raw.csv', index_col=False)
 
     for index, row in df.iterrows():
@@ -70,9 +53,8 @@ def daily_update():
     df_eusouths19j = df_eusouths19j.loc[df_eusouths19j['timestamp'] == todays_date]
     insert_row(df_eusouths19j['timestamp'].iloc[0], str(df_eusouths19j['hashrate_in_phs'].iloc[0]),str(df_eusouths19j['daily_reward'].iloc[0]), df_eusouths19j['hoster'].iloc[0],df_eusouths19j['pool'].iloc[0], df_eusouths19j['miner'].iloc[0])
 
-
 if __name__ == '__main__':
-    daily_update()
+    import_data_from_csv()
 
 
 
