@@ -10,6 +10,8 @@ import datetime
 import matplotlib.pyplot as plt
 import time
 
+import database_update
+
 coin_type = 'BTC'  # 币种
 sign_id = 'BLOCKGEMS'  # 子账号名
 sign_key = '12eecb4cf25e4fa684c906fa98a803a7'  # 密钥
@@ -660,4 +662,5 @@ def get_data():
 
 if __name__ == '__main__':
     etl()
+    database_update.daily_update()
 

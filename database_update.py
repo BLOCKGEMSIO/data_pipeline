@@ -10,7 +10,7 @@ def insert_row(timestamp, hashrate_in_phs, daily_reward, hoster, pool, miner):
     cnxn = pyodbc.connect(
         'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
     cursor = cnxn.cursor()
-    query = "INSERT INTO BLOCKGEMS(timestamp, hashrate_in_phs, daily_reward,hoster, pool, miner) VALUES ('" + timestamp + "'," + hashrate_in_phs + "," + daily_reward + ",'" + hoster + "','" + pool + "','" + miner + "')"
+    query = "INSERT INTO POOLDATA(timestamp, hashrate_in_phs, daily_reward,hoster, pool, miner) VALUES ('" + timestamp + "'," + hashrate_in_phs + "," + daily_reward + ",'" + hoster + "','" + pool + "','" + miner + "')"
     cursor.execute(query)
     cnxn.commit()
 
@@ -18,7 +18,7 @@ def select_row(timestamp, hoster, pool,miner):
     cnxn = pyodbc.connect(
         'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
     cursor = cnxn.cursor()
-    cursor.execute("SELECT * FROM BLOCKGEMS WHERE timestamp='" + timestamp + "' AND hoster='" + hoster + "' AND pool='"+ pool + "' AND miner='" + miner + "'")
+    cursor.execute("SELECT * FROM POOLDATA WHERE timestamp='" + timestamp + "' AND hoster='" + hoster + "' AND pool='"+ pool + "' AND miner='" + miner + "'")
     row = cursor.fetchall()
     return row
 
@@ -41,7 +41,7 @@ def update(id,timestamp, hashrate_in_phs, daily_reward, hoster, pool, miner):
     cnxn = pyodbc.connect(
         'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
     cursor = cnxn.cursor()
-    query = "UPDATE BLOCKGEMS SET timestamp = '" + timestamp + "', hashrate_in_phs = '" + hashrate_in_phs + "', daily_reward = ' " + daily_reward + " ', hoster = ' " + hoster + " ', pool = ' " + pool + " ', miner = ' " + miner + " ' WHERE id = " + id
+    query = "UPDATE POOLDATA SET timestamp = '" + timestamp + "', hashrate_in_phs = '" + hashrate_in_phs + "', daily_reward = ' " + daily_reward + " ', hoster = ' " + hoster + " ', pool = ' " + pool + " ', miner = ' " + miner + " ' WHERE id = " + id
     cursor.execute(query)
     cnxn.commit()
 
