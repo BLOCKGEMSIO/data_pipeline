@@ -10,7 +10,7 @@ def insert_row(timestamp, hashrate_in_phs, daily_reward, hoster, pool, miner):
     cnxn = pyodbc.connect(
         'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
     cursor = cnxn.cursor()
-    query = "INSERT INTO POOLDATA(timestamp, hashrate_in_phs, daily_reward,hoster, pool, miner) VALUES ('" + timestamp + "'," + hashrate_in_phs + "," + daily_reward + ",'" + hoster + "','" + pool + "','" + miner + "')"
+    query = "INSERT INTO POOLDATA(timestamp, hashrate_in_phs, daily_reward,hoster, pool, miner) VALUES ('"+timestamp+"',"+hashrate_in_phs+","+daily_reward+",'"+hoster+"','"+pool+"','"+miner+"')"
     cursor.execute(query)
     cnxn.commit()
 
@@ -55,42 +55,64 @@ def process_subaccount(df):
         update(id, df['timestamp'].iloc[0], str(df['hashrate_in_phs'].iloc[0]), str(df['daily_reward'].iloc[0]),
                df['hoster'].iloc[0], df['pool'].iloc[0], df['miner'].iloc[0])
 
+def db_trim():
+    cnxn = pyodbc.connect(
+        'DRIVER={ODBC Driver 18 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';UID=' + username + ';PWD=' + password)
+    cursor = cnxn.cursor()
+    query1 = "UPDATE [dbo].[POOLDATA] SET timestamp = LTRIM(RTRIM(timestamp))"
+    query2 = "UPDATE [dbo].[POOLDATA] SET hashrate_in_phs = LTRIM(RTRIM(hashrate_in_phs))"
+    query3 = "UPDATE [dbo].[POOLDATA] SET daily_reward = LTRIM(RTRIM(daily_reward))"
+    query4 = "UPDATE [dbo].[POOLDATA] SET hoster = LTRIM(RTRIM(hoster))"
+    query5 = "UPDATE [dbo].[POOLDATA] SET pool = LTRIM(RTRIM(pool))"
+    query6 = "UPDATE [dbo].[POOLDATA] SET miner = LTRIM(RTRIM(miner))"
+
+    cursor.execute(query1 + query2 + query3 + query4 + query5 + query6)
+    cnxn.commit()
+
 def daily_update():
     from datetime import date
     today_date = date.today().strftime('%Y-%m-%d')
     yesterday_date = yesterday(today_date, False)
     yesterday_date = yesterday_date.strftime('%Y-%m-%d')
 
+    db_trim()
     df_luxor = etl.get_earnings_luxor_para()
     df_luxor = df_luxor.loc[df_luxor['timestamp'] == yesterday_date]
     process_subaccount(df_luxor)
 
+    db_trim()
     df_penguintests19j = etl.get_foundry_penguintests19j()
     df_penguintests19j = df_penguintests19j.loc[df_penguintests19j['timestamp'] == yesterday_date]
     process_subaccount(df_penguintests19j)
 
+    db_trim()
     df_eunorths19j = etl.get_foundry_eunorths19j()
     df_eunorths19j = df_eunorths19j.loc[df_eunorths19j['timestamp'] == yesterday_date]
     process_subaccount(df_eunorths19j)
 
+    db_trim()
     df_eunorths19xp = etl.get_foundry_eunorths19xp()
     df_eunorths19xp = df_eunorths19xp.loc[df_eunorths19xp['timestamp'] == yesterday_date]
     process_subaccount(df_eunorths19xp)
 
+    db_trim()
     df_eueasts19j = etl.get_foundry_eueasts19j()
     df_eueasts19j = df_eueasts19j.loc[df_eueasts19j['timestamp'] == yesterday_date]
     process_subaccount(df_eueasts19j)
 
+    db_trim()
     df_eueasts19xp = etl.get_foundry_eueasts19xp()
     df_eueasts19xp = df_eueasts19xp.loc[df_eueasts19xp['timestamp'] == yesterday_date]
     process_subaccount(df_eueasts19xp)
 
+    db_trim()
     df_eusouths19j = etl.get_foundry_eusouths19j()
     df_eusouths19j = df_eusouths19j.loc[df_eusouths19j['timestamp'] == yesterday_date]
     process_subaccount(df_eusouths19j)
 
 if __name__ == '__main__':
     daily_update()
+
 
 
 
