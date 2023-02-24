@@ -10,8 +10,6 @@ import datetime
 import matplotlib.pyplot as plt
 import time
 
-import database_update
-
 coin_type = 'BTC'  # 币种
 sign_id = 'BLOCKGEMS'  # 子账号名
 sign_key = '12eecb4cf25e4fa684c906fa98a803a7'  # 密钥
@@ -330,6 +328,49 @@ def get_foundry_eueasts19xp():
 
     return df
 
+def get_via_BTC_Hashrate(timestamp):
+    url = "https://www.viabtc.net/res/openapi/v1/hashrate/history"
+    params = {'coin' : 'btc', 'start_date' : timestamp, 'end_date' : timestamp}
+    headers = {
+        'X-API-KEY': 'd2d826a914470c968113a7a41c8a2ef6'
+    }
+
+    resp = requests.request("GET", url, headers=headers, params=params)
+    resp = json.loads(resp.text)
+    hashrate = float(resp['data']['data'][0]['hashrate']) / 1000000000000000
+
+    return hashrate
+
+def get_via_BTC():
+    url = "https://www.viabtc.net/res/openapi/v1/profit/history?coin=btc"
+    payload = {}
+    headers = {
+        'X-API-KEY': 'd2d826a914470c968113a7a41c8a2ef6'
+    }
+
+    resp = requests.request("GET", url, headers=headers, data=payload)
+    resp = json.loads(resp.text)
+    resp = pd.DataFrame(resp['data']['data'])
+    df = pd.read_csv('layout.csv', index_col=False)
+
+    for index, x in resp.iterrows():
+        timestamp = x["date"]
+        hashrate = get_via_BTC_Hashrate(timestamp)
+        reward = float(x["total_profit"])
+        temp = {'timestamp': timestamp, 'hashrate_in_phs': hashrate, 'daily_reward': float(reward)}
+        df = df.append(temp, ignore_index=True)
+
+    df = df.drop_duplicates()
+    df['hoster'] = 'stella'
+    df['pool'] = 'viabtc'
+    df['miner'] = 'S19J'
+    df = insert_zeros(df, "stella", "viabtc", "S19J")
+    df.to_csv('stella.csv', index=False)
+    df = pd.read_csv('stella.csv', index_col=False)
+    upload_file_to_azure('stella.csv')
+
+    return df
+
 def daterange(date1, date2):
     from datetime import timedelta
     for n in range(int ((date2 - date1).days)+1):
@@ -369,6 +410,7 @@ def get_total_earnings_raw():
     df_eunorths19xp = get_foundry_eunorths19xp()
     df_eueasts19j = get_foundry_eueasts19j()
     df_eueasts19xp = get_foundry_eueasts19xp()
+    df_via_btc = get_via_BTC()
 
 
     df = pd.DataFrame(columns=['timestamp', 'hashrate_in_phs', 'daily_reward', 'hoster', 'pool'])
@@ -381,6 +423,7 @@ def get_total_earnings_raw():
     df = df.append(df_eunorths19xp)
     df = df.append(df_eueasts19j)
     df = df.append(df_eueasts19xp)
+    df = df.append(df_via_btc)
     btc_prices = get_historic_price_usd(df)
     from datetime import date
     today = str(date.today())
@@ -662,5 +705,5 @@ def get_data():
 
 if __name__ == '__main__':
     etl()
-    database_update.daily_update()
+    #database_update.daily_update()
 
