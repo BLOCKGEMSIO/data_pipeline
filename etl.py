@@ -3,6 +3,8 @@ import hmac, hashlib
 import json
 import pandas as pd
 import requests
+import dill
+import cryptocmd
 from requests.structures import CaseInsensitiveDict
 import datetime
 import time
