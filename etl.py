@@ -3,12 +3,11 @@ import hmac, hashlib
 import json
 import pandas as pd
 import requests
-import dill
-import cryptocmd
 from requests.structures import CaseInsensitiveDict
 import datetime
-import matplotlib.pyplot as plt
 import time
+
+import database_update
 
 coin_type = 'BTC'  # 币种
 sign_id = 'BLOCKGEMS'  # 子账号名
@@ -705,5 +704,5 @@ def get_data():
 
 if __name__ == '__main__':
     etl()
-    #database_update.daily_update()
+    database_update.daily_update()
 
