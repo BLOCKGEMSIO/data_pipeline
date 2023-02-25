@@ -319,10 +319,10 @@ def get_foundry_eueasts19xp():
         df = df.append(temp, ignore_index=True)
 
     df = df.drop_duplicates()
-    df['hoster'] = 'rosenenergoatom'
+    df['hoster'] = 'stella'
     df['pool'] = 'foundry'
     df['miner'] = 'S19XP'
-    df = insert_zeros(df, "rosenenergoatom", "foundry", "S19XP")
+    df = insert_zeros(df, "stella", "foundry", "S19XP")
     df.to_csv('eueasts19xp.csv', index=False)
     df = pd.read_csv('eueasts19xp.csv', index_col=False)
     upload_file_to_azure('eueasts19xp.csv')
