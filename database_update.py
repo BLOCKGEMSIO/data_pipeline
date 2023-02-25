@@ -155,6 +155,12 @@ def daily_update():
     df_eusouths19j = etl.get_foundry_eusouths19j()
     df_eusouths19j = df_eusouths19j.loc[df_eusouths19j['timestamp'] == yesterday_date]
     process_subaccount(df_eusouths19j)
+
+    db_trim()
+    df_via_btc = etl.get_via_BTC()
+    df_via_btc = df_via_btc.loc[df_via_btc['timestamp'] == yesterday_date]
+    process_subaccount(df_via_btc)
+
     db_trim()
 
 if __name__ == '__main__':
